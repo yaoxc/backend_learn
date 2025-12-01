@@ -1,0 +1,190 @@
+services:
+  mysql-db:
+    container_name: bizzan-mysql
+    image: library/mysql:5.7.29
+    platform: linux/amd64
+    restart: always
+    volumes:
+      - ./sql/my.conf:/etc/my.conf
+      - ./sql/init:/docker-entrypoint-initdb.d/
+      - ./sql/data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - app-network
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: bizzan
+      MYSQL_LOWER_CASE_TABLE_NAMES: 1
+
+  # 新增 Redis 服务
+  redis:
+    image: redis:7.0-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass Magician8421  # 使ls
+    networks:
+      - app-network
+    restart: unless-stopped
+    
+  mongo:
+    image: mongo:3.6
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+    restart: unless-stopped
+    networks:
+      - app-network
+  zookeeper:
+    image: bitnamilegacy/zookeeper:3.8
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes  # 允许匿名访问
+    volumes:
+      - "zookeeper_data:/bitnami"
+    networks:
+      - app-network
+
+  kafka:
+    image: bitnamilegacy/kafka:3.4
+    container_name: kafka
+    ports:
+      - "9092:9092"  # Kafka 服务端口
+      - "9093:9093"  # 备用端口（可选）
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes  # 允许明文连接
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092  # 客户端连接地址
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true  # 自动创建主题
+      # 增加日志详细级别
+
+
+      # 精简日志级别配置
+      - KAFKA_LOG4J_ROOT_LOGLEVEL=WARN
+      - KAFKA_LOG4J_LOGGERS=org.apache.kafka.clients.producer=INFO,org.apache.kafka.clients.consumer=INFO,kafka.producer=INFO,kafka.consumer=INFO,kafka.server.ReplicaManager=INFO
+
+    volumes:
+      - "kafka_data:/bitnami"
+      - ./custom-log4j.properties:/opt/bitnami/kafka/config/log4j.properties
+    depends_on:
+      - zookeeper
+    networks:
+      - app-network
+
+  cloud:
+    build:
+      context: .
+      dockerfile: Dockerfile.cloud
+    ports:
+      - "7421:7421"
+    networks:
+      - app-network
+    depends_on:
+      - kafka
+
+  uc:
+    build:
+      context: .
+      dockerfile: Dockerfile.uc
+    ports:
+      - "6001:6001"
+    depends_on:
+      - cloud
+      - redis
+      - mysql-db
+    networks:
+      - app-network
+
+  exchangeapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.exchangeapi
+    ports:
+      - "6003:6003"
+    depends_on:
+      - market
+    networks:
+      - app-network
+
+  exchange:
+    build:
+      context: .
+      dockerfile: Dockerfile.exchange
+    ports:
+      - "6005:6005"
+    depends_on:
+      - market
+    networks:
+      - app-network
+
+  market:
+    build:
+      context: .
+      dockerfile: Dockerfile.market
+    ports:
+      - "6004:6004"
+    depends_on:
+      - uc
+    networks:
+      - app-network
+
+  wallet-core:
+    build:
+      context: .
+      dockerfile: Dockerfile.wallet.core
+    ports:
+      - "6009:6009"
+    depends_on:
+      - cloud
+      - mongo
+      - kafka
+    extra_hosts: # 添加这一部分，让容器能解析 host.docker.internal
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+
+
+  wallet-eth:
+    build:
+      context: .
+      dockerfile: Dockerfile.wallet.eth
+    ports:
+      - "7003:7003"
+    depends_on:
+      - cloud
+      - mongo
+      - kafka
+    extra_hosts: # 添加这一部分，让容器能解析 host.docker.internal
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+
+  wallet-eusdt:
+    build:
+      context: .
+      dockerfile: Dockerfile.wallet.eusdt
+    ports:
+      - "7004:7004"
+    depends_on:
+      - wallet-core
+    extra_hosts: # 添加这一部分，让容器能解析 host.docker.internal
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+volumes:
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local

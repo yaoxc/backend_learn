@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- scan="true" 表示 60 秒内如果配置文件本身被修改，logback 会自动重新加载，开发阶段很方便 -->
+<configuration scan="true" scanPeriod="60 seconds">
+
+    <!-- 给当前 logger context 起个名字，方便在多进程环境里区分，可随意改 -->
+    <contextName>logback</contextName>
+
+    <!-- ************** 1. 控制台 appender ************** -->
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- 编码用 UTF-8（默认就是），图案：
+               14:23:45.033 [main] INFO  c.b.b.CloudApplication - Started in 3.5 s
+               %d{HH:mm:ss.SSS}  时间到毫秒
+               [%thread]         线程名
+               %-5level          级别左对齐占 5 位
+               %logger{36}       类名最长 36 字符，再长就压缩包名
+               %msg%n            消息 + 换行
+            -->
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ************** 2. 文件滚动 appender ************** -->
+    <appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 活跃文件：当前正在写的文件，重启不会清空 -->
+        <file>logs/cloud.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- 归档文件名：每天一个目录，内部按 200 MB 切片
+               示例：logs/2025-06-21/cloud.0.log  … cloud.1.log …
+               %i 是切片序号，从 0 开始递增 -->
+            <fileNamePattern>logs/%d{yyyy-MM-dd}/cloud.%i.log</fileNamePattern>
+
+            <!-- 单个文件达到 200 MB 就触发滚动 -->
+            <maxFileSize>200MB</maxFileSize>
+
+            <!-- 最多保留 30 天的历史（与 totalSizeCap 谁先满谁触发清理） -->
+            <maxHistory>30</maxHistory>
+
+            <!-- 所有归档文件总量上限 10 GB，超限最老的会被删除 -->
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+
+        <encoder>
+            <!-- 文件里把日期补全到“天”，方便离线分析 -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ************** 3. 异步写文件 ************** -->
+    <!-- 把同步磁盘操作交给后台队列，业务线程直接返回，QPS 高时效果明显 -->
+    <appender name="asyncFile" class="ch.qos.logback.classic.AsyncAppender">
+        <!-- 队列满时的策略默认丢弃 TRACE/DEBUG，INFO 以上不会丢 -->
+        <appender-ref ref="file"/>
+        <!-- 可选：queueSize/maxFlushTime 等都可再调，默认够用 -->
+    </appender>
+
+    <!-- ************** 4. 根日志级别与 appender 绑定 ************** -->
+    <root level="INFO">
+        <!-- 同时输出到控制台 + 异步文件；如只想文件，把 console 去掉即可 -->
+        <appender-ref ref="console"/>
+        <appender-ref ref="asyncFile"/>
+    </root>
+</configuration>
