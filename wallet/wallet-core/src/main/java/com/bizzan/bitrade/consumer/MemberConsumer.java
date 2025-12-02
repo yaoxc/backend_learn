@@ -164,50 +164,50 @@ public class MemberConsumer {
      * @param coinSymbol 币种符号（如ETH、USDT）
      * @return 钱包地址（含私钥加密存储信息，仅返回地址给调用方）
      */
-    public String generateWalletAddress(String coinSymbol) throws Exception {
-        // 1. 生成随机密钥对（私钥+公钥）：Web3j封装secp256k1算法
-        ECKeyPair ecKeyPair = Keys.createEcKeyPair();
-        BigInteger privateKey = ecKeyPair.getPrivateKey(); // 私钥（需加密存储）
-        String address = "0x" + Keys.getAddress(ecKeyPair); // 公钥→地址（自动处理哈希和截取）
-
-        logger.info("生成 {} 钱包地址：{}，私钥（加密前）：{}", coinSymbol, address, privateKey.toString(16));
-
-        // 2. 加密私钥（关键！不能明文存储，用AES加密后存入数据库）
-        String encryptedPrivateKey = encryptPrivateKey(privateKey.toString(16));
-
-        // 3. 存储地址+加密私钥到RPC服务的数据库（后续签名交易时使用）
-        WalletRecord walletRecord = WalletRecord.builder()
-                .coinSymbol(coinSymbol)
-                .address(address)
-                .encryptedPrivateKey(encryptedPrivateKey)
-                .createTime(new Date())
-                .status(1) // 地址状态：可用
-                .build();
-        walletRecordRepository.save(walletRecord);
-
-        // 4. 仅返回地址给调用方（钱包服务），私钥不对外暴露
-        return address;
-    }
-
-    /**
-     * AES加密私钥（防止私钥泄露，密钥从配置文件读取，需定期轮换）
-     * @param privateKey 明文私钥（16进制字符串）
-     * @return 加密后的私钥
-     */
-    private String encryptPrivateKey(String privateKey) throws Exception {
-        // 从配置文件读取AES密钥和偏移量（生产环境需配置在配置中心，如Nacos/Apollo）
-        @Value("${wallet.private-key.aes.key}")
-        String aesKey; // 16位（AES-128）或32位（AES-256）
-        @Value("${wallet.private-key.aes.iv}")
-        String aesIv; // 16位
-
-        // 使用AES/CBC/PKCS5Padding模式加密
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        SecretKeySpec keySpec = new SecretKeySpec(aesKey.getBytes(StandardCharsets.UTF_8), "AES");
-        IvParameterSpec ivSpec = new IvParameterSpec(aesIv.getBytes(StandardCharsets.UTF_8));
-        cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
-
-        byte[] encryptedBytes = cipher.doFinal(privateKey.getBytes(StandardCharsets.UTF_8));
-        return Base64.getEncoder().encodeToString(encryptedBytes); // Base64编码后存储
-    }
+//    public String generateWalletAddress(String coinSymbol) throws Exception {
+//        // 1. 生成随机密钥对（私钥+公钥）：Web3j封装secp256k1算法
+//        ECKeyPair ecKeyPair = Keys.createEcKeyPair();
+//        BigInteger privateKey = ecKeyPair.getPrivateKey(); // 私钥（需加密存储）
+//        String address = "0x" + Keys.getAddress(ecKeyPair); // 公钥→地址（自动处理哈希和截取）
+//
+//        logger.info("生成 {} 钱包地址：{}，私钥（加密前）：{}", coinSymbol, address, privateKey.toString(16));
+//
+//        // 2. 加密私钥（关键！不能明文存储，用AES加密后存入数据库）
+//        String encryptedPrivateKey = encryptPrivateKey(privateKey.toString(16));
+//
+//        // 3. 存储地址+加密私钥到RPC服务的数据库（后续签名交易时使用）
+//        WalletRecord walletRecord = WalletRecord.builder()
+//                .coinSymbol(coinSymbol)
+//                .address(address)
+//                .encryptedPrivateKey(encryptedPrivateKey)
+//                .createTime(new Date())
+//                .status(1) // 地址状态：可用
+//                .build();
+//        walletRecordRepository.save(walletRecord);
+//
+//        // 4. 仅返回地址给调用方（钱包服务），私钥不对外暴露
+//        return address;
+//    }
+//
+//    /**
+//     * AES加密私钥（防止私钥泄露，密钥从配置文件读取，需定期轮换）
+//     * @param privateKey 明文私钥（16进制字符串）
+//     * @return 加密后的私钥
+//     */
+//    private String encryptPrivateKey(String privateKey) throws Exception {
+//        // 从配置文件读取AES密钥和偏移量（生产环境需配置在配置中心，如Nacos/Apollo）
+//        @Value("${wallet.private-key.aes.key}")
+//        String aesKey; // 16位（AES-128）或32位（AES-256）
+//        @Value("${wallet.private-key.aes.iv}")
+//        String aesIv; // 16位
+//
+//        // 使用AES/CBC/PKCS5Padding模式加密
+//        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+//        SecretKeySpec keySpec = new SecretKeySpec(aesKey.getBytes(StandardCharsets.UTF_8), "AES");
+//        IvParameterSpec ivSpec = new IvParameterSpec(aesIv.getBytes(StandardCharsets.UTF_8));
+//        cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
+//
+//        byte[] encryptedBytes = cipher.doFinal(privateKey.getBytes(StandardCharsets.UTF_8));
+//        return Base64.getEncoder().encodeToString(encryptedBytes); // Base64编码后存储
+//    }
 }
