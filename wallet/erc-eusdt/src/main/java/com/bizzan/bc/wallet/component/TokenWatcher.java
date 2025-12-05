@@ -43,6 +43,8 @@ public class TokenWatcher extends Watcher{
     @Autowired(required = false)
     private EtherscanApi etherscanApi;
 
+
+
     @Autowired
     private DepositEvent depositEvent;
 
