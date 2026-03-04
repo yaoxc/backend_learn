@@ -36,7 +36,7 @@ public class DefaultCoinProcessor implements CoinProcessor {
     private MarketService service;
     private CoinExchangeRate coinExchangeRate;
     //是否暂时处理
-    private Boolean isHalt = true;
+    private Boolean isHalt = true;  // Halt:  "Halt" (停) 的意思是停止、中止
     //是否停止K线生成
     private Boolean stopKLine = false;
 

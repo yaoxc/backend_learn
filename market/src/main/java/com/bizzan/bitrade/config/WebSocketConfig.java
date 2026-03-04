@@ -8,6 +8,8 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry; /
 
 @Configuration // 被 Spring 扫描加载
 @EnableWebSocketMessageBroker // 开启“STOMP over WebSocket”功能
+// STOMP = Simple (or Streaming) Text Oriented Messaging Protocol
+//一个基于文本、帧格式的简单消息协议, 让 WebSocket 像用 JMS/AMQP 一样发消息，却只需文本帧。”
 public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
 
     /**

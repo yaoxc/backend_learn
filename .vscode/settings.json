@@ -1,0 +1,9 @@
+{
+    "Codegeex.RepoIndex": true,
+    "java.compile.nullAnalysis.mode": "automatic",
+
+    "markdown.preview.doubleClickToSwitchToEditor": false,
+    "workbench.editorAssociations": {
+        "*.md": "vscode.markdown.preview.editor"
+    }
+}
