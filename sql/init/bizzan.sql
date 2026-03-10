@@ -23,56 +23,56 @@ DROP TABLE IF EXISTS `activity`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `activity` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `activity_link` varchar(255) DEFAULT NULL,
-  `create_time` datetime DEFAULT NULL,
-  `detail` varchar(255) DEFAULT NULL,
-  `image_url` varchar(255) DEFAULT NULL,
-  `notice_link` varchar(255) DEFAULT NULL,
-  `progress` int(11) NOT NULL,
-  `settings` varchar(255) DEFAULT NULL,
-  `status` int(11) DEFAULT NULL,
-  `step` int(11) NOT NULL,
-  `title` varchar(255) DEFAULT NULL,
-  `type` int(11) NOT NULL,
-  `accept_unit` varchar(255) NOT NULL,
-  `amount_scale` int(11) NOT NULL,
-  `banner_image_url` varchar(255) DEFAULT NULL,
-  `content` text,
-  `contenten` text,
-  `detailen` varchar(255) DEFAULT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `activity_link` varchar(255) DEFAULT NULL COMMENT '活动链接',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `detail` varchar(255) DEFAULT NULL COMMENT '详情',
+  `image_url` varchar(255) DEFAULT NULL COMMENT '图片URL',
+  `notice_link` varchar(255) DEFAULT NULL COMMENT '公告链接',
+  `progress` int(11) NOT NULL COMMENT '进度',
+  `settings` varchar(255) DEFAULT NULL COMMENT '配置JSON',
+  `status` int(11) DEFAULT NULL COMMENT '状态',
+  `step` int(11) NOT NULL COMMENT '步骤',
+  `title` varchar(255) DEFAULT NULL COMMENT '标题',
+  `type` int(11) NOT NULL COMMENT '活动类型抢购锁仓挖矿等',
+  `accept_unit` varchar(255) NOT NULL COMMENT '接受单位',
+  `amount_scale` int(11) NOT NULL COMMENT '数量精度',
+  `banner_image_url` varchar(255) DEFAULT NULL COMMENT '横幅图URL',
+  `content` text COMMENT '内容',
+  `contenten` text COMMENT '英文内容',
+  `detailen` varchar(255) DEFAULT NULL COMMENT '英文详情',
   `end_time` varchar(30) NOT NULL DEFAULT '2000-01-01 01:00:00' COMMENT '结束时间',
-  `limit_times` int(11) NOT NULL,
-  `max_limit_amout` decimal(24,8) DEFAULT NULL,
-  `min_limit_amout` decimal(24,8) DEFAULT NULL,
-  `price` decimal(18,8) DEFAULT NULL,
-  `price_scale` int(11) NOT NULL,
-  `small_image_url` varchar(255) DEFAULT NULL,
+  `limit_times` int(11) NOT NULL COMMENT '限购次数',
+  `max_limit_amout` decimal(24,8) DEFAULT NULL COMMENT '最大限购量',
+  `min_limit_amout` decimal(24,8) DEFAULT NULL COMMENT '最小限购量',
+  `price` decimal(18,8) DEFAULT NULL COMMENT '价格',
+  `price_scale` int(11) NOT NULL COMMENT '价格精度',
+  `small_image_url` varchar(255) DEFAULT NULL COMMENT '小图URL',
   `start_time` varchar(30) NOT NULL DEFAULT '2000-01-01 01:00:00' COMMENT '开始时间',
-  `titleen` varchar(255) DEFAULT NULL,
-  `total_supply` decimal(24,8) NOT NULL,
-  `traded_amount` decimal(24,8) DEFAULT NULL,
-  `unit` varchar(255) NOT NULL,
-  `freeze_amount` decimal(26,8) DEFAULT NULL,
-  `levelone_count` int(11) NOT NULL,
-  `mining_days` int(11) NOT NULL,
-  `mining_daysprofit` decimal(24,8) DEFAULT NULL,
-  `mining_invite` decimal(24,8) DEFAULT NULL,
-  `mining_invitelimit` decimal(24,8) DEFAULT NULL,
-  `mining_unit` varchar(255) NOT NULL,
-  `mining_period` int(11) NOT NULL,
-  `hold_limit` decimal(24,8) DEFAULT NULL,
-  `hold_unit` varchar(255) DEFAULT NULL,
-  `locked_days` int(11) NOT NULL,
-  `locked_fee` decimal(24,8) DEFAULT NULL,
-  `locked_period` int(11) NOT NULL,
-  `locked_unit` varchar(255) DEFAULT NULL,
-  `release_amount` decimal(24,8) DEFAULT NULL,
-  `release_percent` decimal(24,8) DEFAULT NULL,
-  `release_times` decimal(24,8) DEFAULT NULL,
-  `release_type` int(11) NOT NULL,
+  `titleen` varchar(255) DEFAULT NULL COMMENT '英文标题',
+  `total_supply` decimal(24,8) NOT NULL COMMENT '总供应量',
+  `traded_amount` decimal(24,8) DEFAULT NULL COMMENT '已成交数量',
+  `unit` varchar(255) NOT NULL COMMENT '单位',
+  `freeze_amount` decimal(26,8) DEFAULT NULL COMMENT '冻结数量',
+  `levelone_count` int(11) NOT NULL COMMENT '一级人数',
+  `mining_days` int(11) NOT NULL COMMENT '挖矿天数',
+  `mining_daysprofit` decimal(24,8) DEFAULT NULL COMMENT '挖矿日收益',
+  `mining_invite` decimal(24,8) DEFAULT NULL COMMENT '挖矿邀请奖励',
+  `mining_invitelimit` decimal(24,8) DEFAULT NULL COMMENT '挖矿邀请上限',
+  `mining_unit` varchar(255) NOT NULL COMMENT '挖矿单位',
+  `mining_period` int(11) NOT NULL COMMENT '挖矿周期',
+  `hold_limit` decimal(24,8) DEFAULT NULL COMMENT '持币限制',
+  `hold_unit` varchar(255) DEFAULT NULL COMMENT '持币单位',
+  `locked_days` int(11) NOT NULL COMMENT '锁仓天数',
+  `locked_fee` decimal(24,8) DEFAULT NULL COMMENT '锁仓费率',
+  `locked_period` int(11) NOT NULL COMMENT '锁仓周期',
+  `locked_unit` varchar(255) DEFAULT NULL COMMENT '锁仓单位',
+  `release_amount` decimal(24,8) DEFAULT NULL COMMENT '释放数量',
+  `release_percent` decimal(24,8) DEFAULT NULL COMMENT '释放比例',
+  `release_times` decimal(24,8) DEFAULT NULL COMMENT '释放次数',
+  `release_type` int(11) NOT NULL COMMENT '释放类型',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=14540 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=14540 DEFAULT CHARSET=utf8 COMMENT='活动配置抢购锁仓挖矿等';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -93,20 +93,20 @@ DROP TABLE IF EXISTS `activity_order`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `activity_order` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `activity_id` bigint(20) DEFAULT NULL,
-  `amount` decimal(24,8) DEFAULT NULL,
-  `base_symbol` varchar(255) DEFAULT NULL,
-  `coin_symbol` varchar(255) DEFAULT NULL,
-  `create_time` datetime DEFAULT NULL,
-  `freeze_amount` decimal(24,8) DEFAULT NULL,
-  `member_id` bigint(20) DEFAULT NULL,
-  `price` decimal(24,8) DEFAULT NULL,
-  `state` int(11) NOT NULL,
-  `turnover` decimal(26,16) DEFAULT NULL,
-  `type` int(11) NOT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `activity_id` bigint(20) DEFAULT NULL COMMENT '活动ID',
+  `amount` decimal(24,8) DEFAULT NULL COMMENT '数量',
+  `base_symbol` varchar(255) DEFAULT NULL COMMENT '计价币',
+  `coin_symbol` varchar(255) DEFAULT NULL COMMENT '交易币',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `freeze_amount` decimal(24,8) DEFAULT NULL COMMENT '冻结数量',
+  `member_id` bigint(20) DEFAULT NULL COMMENT '用户ID',
+  `price` decimal(24,8) DEFAULT NULL COMMENT '价格',
+  `state` int(11) NOT NULL COMMENT '状态',
+  `turnover` decimal(26,16) DEFAULT NULL COMMENT '成交额',
+  `type` int(11) NOT NULL COMMENT '类型',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户参与活动订单';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -126,25 +126,25 @@ DROP TABLE IF EXISTS `admin`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `admin` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `avatar` varchar(255) DEFAULT NULL,
-  `email` varchar(255) DEFAULT NULL,
-  `enable` int(11) DEFAULT NULL,
-  `last_login_ip` varchar(255) DEFAULT NULL,
-  `last_login_time` datetime DEFAULT NULL,
-  `mobile_phone` varchar(255) NOT NULL,
-  `password` varchar(255) DEFAULT NULL,
-  `qq` varchar(255) DEFAULT NULL,
-  `real_name` varchar(255) NOT NULL,
-  `role_id` bigint(20) NOT NULL,
-  `status` int(11) DEFAULT NULL,
-  `username` varchar(255) NOT NULL,
-  `department_id` bigint(20) NOT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `avatar` varchar(255) DEFAULT NULL COMMENT '头像',
+  `email` varchar(255) DEFAULT NULL COMMENT '邮箱',
+  `enable` int(11) DEFAULT NULL COMMENT '是否启用',
+  `last_login_ip` varchar(255) DEFAULT NULL COMMENT '最后登录IP',
+  `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
+  `mobile_phone` varchar(255) NOT NULL COMMENT '手机号',
+  `password` varchar(255) DEFAULT NULL COMMENT '密码',
+  `qq` varchar(255) DEFAULT NULL COMMENT 'QQ',
+  `real_name` varchar(255) NOT NULL COMMENT '真实姓名',
+  `role_id` bigint(20) NOT NULL COMMENT '角色ID',
+  `status` int(11) DEFAULT NULL COMMENT '状态',
+  `username` varchar(255) NOT NULL COMMENT '用户名',
+  `department_id` bigint(20) NOT NULL COMMENT '部门ID',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `UK_gfn44sntic2k93auag97juyij` (`username`) USING BTREE,
   KEY `FKibjnyhe6m46qfkc6vgbir1ucq` (`department_id`) USING BTREE,
   CONSTRAINT `FKnmmt6f2kg0oaxr11uhy7qqf3w` FOREIGN KEY (`department_id`) REFERENCES `department` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COMMENT='后台管理员账号';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -174,7 +174,7 @@ CREATE TABLE `admin_access_log` (
   `operation` varchar(255) DEFAULT NULL,
   `uri` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=47450 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=47450 DEFAULT CHARSET=utf8 COMMENT='管理员操作访问日志';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -202,7 +202,7 @@ CREATE TABLE `admin_permission` (
   `sort` int(11) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=256 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=256 DEFAULT CHARSET=utf8 COMMENT='权限项定义';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -227,7 +227,7 @@ CREATE TABLE `admin_role` (
   `description` varchar(255) DEFAULT NULL,
   `role` varchar(255) NOT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8 COMMENT='角色定义';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -255,7 +255,7 @@ CREATE TABLE `admin_role_permission` (
   KEY `FKqf3fhgl5mjqqb0jeupx7yafh0` (`rule_id`) USING BTREE,
   CONSTRAINT `FK52rddd3qje4p49iubt08gplb5` FOREIGN KEY (`role_id`) REFERENCES `admin_role` (`id`),
   CONSTRAINT `FKqf3fhgl5mjqqb0jeupx7yafh0` FOREIGN KEY (`rule_id`) REFERENCES `admin_permission` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='角色与权限关联';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -276,32 +276,32 @@ DROP TABLE IF EXISTS `advertise`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `advertise` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `advertise_type` int(11) NOT NULL,
-  `auto` int(11) DEFAULT NULL,
-  `autoword` varchar(255) DEFAULT NULL,
-  `coin_unit` varchar(255) DEFAULT NULL,
-  `create_time` datetime DEFAULT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `advertise_type` int(11) NOT NULL COMMENT '广告类型买/卖',
+  `auto` int(11) DEFAULT NULL COMMENT '是否自动',
+  `autoword` varchar(255) DEFAULT NULL COMMENT '自动回复语',
+  `coin_unit` varchar(255) DEFAULT NULL COMMENT '币种单位',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `deal_amount` decimal(18,8) DEFAULT NULL COMMENT '交易中数量',
-  `level` int(11) DEFAULT NULL,
-  `limit_money` varchar(255) DEFAULT NULL,
+  `level` int(11) DEFAULT NULL COMMENT '等级',
+  `limit_money` varchar(255) DEFAULT NULL COMMENT '限额',
   `max_limit` decimal(18,2) DEFAULT NULL COMMENT '最高单笔交易额',
   `min_limit` decimal(18,2) DEFAULT NULL COMMENT '最低单笔交易额',
   `number` decimal(18,8) DEFAULT NULL COMMENT '计划数量',
-  `pay_mode` varchar(255) DEFAULT NULL,
+  `pay_mode` varchar(255) DEFAULT NULL COMMENT '支付方式',
   `premise_rate` decimal(18,6) DEFAULT NULL COMMENT '溢价百分比',
   `price` decimal(18,2) DEFAULT NULL COMMENT '交易价格',
-  `price_type` int(11) NOT NULL,
+  `price_type` int(11) NOT NULL COMMENT '价格类型',
   `remain_amount` decimal(18,8) DEFAULT NULL COMMENT '计划剩余数量',
-  `remark` varchar(255) DEFAULT NULL,
-  `status` int(11) DEFAULT NULL,
-  `time_limit` int(11) DEFAULT NULL,
-  `update_time` datetime DEFAULT NULL,
-  `username` varchar(255) DEFAULT NULL,
-  `version` bigint(20) DEFAULT NULL,
-  `coin_id` bigint(20) NOT NULL,
-  `country` varchar(255) NOT NULL,
-  `member_id` bigint(20) NOT NULL,
+  `remark` varchar(255) DEFAULT NULL COMMENT '备注',
+  `status` int(11) DEFAULT NULL COMMENT '状态',
+  `time_limit` int(11) DEFAULT NULL COMMENT '时限分钟',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `username` varchar(255) DEFAULT NULL COMMENT '用户名',
+  `version` bigint(20) DEFAULT NULL COMMENT '版本',
+  `coin_id` bigint(20) NOT NULL COMMENT 'OTC币种ID',
+  `country` varchar(255) NOT NULL COMMENT '国家',
+  `member_id` bigint(20) NOT NULL COMMENT '用户ID',
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FK75rse9iecdnimf8ugtf20c43l` (`coin_id`) USING BTREE,
   KEY `FK9lueh92242ckyajg17xr9tcie` (`country`) USING BTREE,
@@ -309,7 +309,7 @@ CREATE TABLE `advertise` (
   CONSTRAINT `FK75rse9iecdnimf8ugtf20c43l` FOREIGN KEY (`coin_id`) REFERENCES `otc_coin` (`id`),
   CONSTRAINT `FK9lueh92242ckyajg17xr9tcie` FOREIGN KEY (`country`) REFERENCES `country` (`zh_name`),
   CONSTRAINT `FKspoip5yq9ednwwondsga9c9k6` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8 COMMENT='OTC买卖广告';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -330,18 +330,18 @@ DROP TABLE IF EXISTS `announcement`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `announcement` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `content` text,
-  `create_time` datetime DEFAULT NULL,
-  `img_url` varchar(255) DEFAULT NULL,
-  `is_show` bit(1) DEFAULT NULL,
-  `is_top` varchar(255) DEFAULT NULL,
-  `sort` int(11) NOT NULL,
-  `title` varchar(255) NOT NULL,
-  `lang` varchar(255) DEFAULT NULL,
-  `announcement_classification` int(11) NOT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `content` text COMMENT '内容',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `img_url` varchar(255) DEFAULT NULL COMMENT '图片URL',
+  `is_show` bit(1) DEFAULT NULL COMMENT '是否展示',
+  `is_top` varchar(255) DEFAULT NULL COMMENT '是否置顶',
+  `sort` int(11) NOT NULL COMMENT '排序',
+  `title` varchar(255) NOT NULL COMMENT '标题',
+  `lang` varchar(255) DEFAULT NULL COMMENT '语言',
+  `announcement_classification` int(11) NOT NULL COMMENT '公告分类',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8 COMMENT='公告';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -362,14 +362,14 @@ DROP TABLE IF EXISTS `app_revision`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `app_revision` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `download_url` varchar(255) DEFAULT NULL,
-  `platform` int(11) DEFAULT NULL,
-  `publish_time` datetime DEFAULT NULL,
-  `remark` varchar(255) DEFAULT NULL,
-  `version` varchar(255) DEFAULT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `download_url` varchar(255) DEFAULT NULL COMMENT '下载地址',
+  `platform` int(11) DEFAULT NULL COMMENT '平台0安卓1苹果',
+  `publish_time` datetime DEFAULT NULL COMMENT '发布时间',
+  `remark` varchar(255) DEFAULT NULL COMMENT '备注',
+  `version` varchar(255) DEFAULT NULL COMMENT '版本号',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COMMENT='APP版本更新';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -390,22 +390,22 @@ DROP TABLE IF EXISTS `appeal`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `appeal` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `associate_id` bigint(20) DEFAULT NULL,
-  `create_time` datetime DEFAULT NULL,
-  `deal_with_time` datetime DEFAULT NULL,
-  `initiator_id` bigint(20) DEFAULT NULL,
-  `is_success` int(11) DEFAULT NULL,
-  `remark` varchar(500) DEFAULT NULL,
-  `status` int(11) DEFAULT NULL,
-  `admin_id` bigint(20) DEFAULT NULL,
-  `order_id` bigint(20) NOT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `associate_id` bigint(20) DEFAULT NULL COMMENT '关联用户ID',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `deal_with_time` datetime DEFAULT NULL COMMENT '处理时间',
+  `initiator_id` bigint(20) DEFAULT NULL COMMENT '发起人ID',
+  `is_success` int(11) DEFAULT NULL COMMENT '是否申诉成功',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `status` int(11) DEFAULT NULL COMMENT '状态',
+  `admin_id` bigint(20) DEFAULT NULL COMMENT '处理管理员ID',
+  `order_id` bigint(20) NOT NULL COMMENT 'OTC订单ID',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `UK_todwxorutclquf69bwow70kml` (`order_id`) USING BTREE,
   KEY `FKanmcnj859x2tv3y0pv7u05cqa` (`admin_id`) USING BTREE,
   CONSTRAINT `FKanmcnj859x2tv3y0pv7u05cqa` FOREIGN KEY (`admin_id`) REFERENCES `admin` (`id`),
   CONSTRAINT `FKs3vo8h01sq39icylq1qdwekn1` FOREIGN KEY (`order_id`) REFERENCES `otc_order` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='申诉如OTC纠纷';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -442,7 +442,7 @@ CREATE TABLE `business_auth_apply` (
   KEY `FKdghp8ri44t77ntuw06gicphuu` (`member_id`) USING BTREE,
   CONSTRAINT `FKdghp8ri44t77ntuw06gicphuu` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`),
   CONSTRAINT `FKds72omottejlk5isd34ha5i10` FOREIGN KEY (`business_auth_deposit_id`) REFERENCES `business_auth_deposit` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='商家认证申请';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -473,7 +473,7 @@ CREATE TABLE `business_auth_deposit` (
   KEY `FKjx7799a3pwdtnu43fkpn27kj6` (`coin_id`) USING BTREE,
   CONSTRAINT `FKfj3hxtr3ae1yma9bxeuqc29pj` FOREIGN KEY (`admin_id`) REFERENCES `admin` (`id`),
   CONSTRAINT `FKjx7799a3pwdtnu43fkpn27kj6` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COMMENT='商家认证保证金';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -505,7 +505,7 @@ CREATE TABLE `bussiness_cancel_apply` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FKbwtwtm0jd1eqa8dh7e8ychcx1` (`member_id`) USING BTREE,
   CONSTRAINT `FKbwtwtm0jd1eqa8dh7e8ychcx1` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='商家注销申请';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -525,35 +525,35 @@ DROP TABLE IF EXISTS `coin`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `coin` (
-  `name` varchar(255) NOT NULL,
-  `can_auto_withdraw` int(11) DEFAULT NULL,
-  `can_recharge` int(11) DEFAULT NULL,
-  `can_transfer` int(11) DEFAULT NULL,
-  `can_withdraw` int(11) DEFAULT NULL,
-  `cny_rate` double NOT NULL,
-  `enable_rpc` int(11) DEFAULT NULL,
-  `is_platform_coin` int(11) DEFAULT NULL,
-  `max_tx_fee` double NOT NULL,
+  `name` varchar(255) NOT NULL COMMENT '币种唯一标识，如USDT、Bitcoin、Ethereum',
+  `can_auto_withdraw` int(11) DEFAULT NULL COMMENT '是否支持自动提现',
+  `can_recharge` int(11) DEFAULT NULL COMMENT '是否可充值',
+  `can_transfer` int(11) DEFAULT NULL COMMENT '是否可内部转账',
+  `can_withdraw` int(11) DEFAULT NULL COMMENT '是否可提现',
+  `cny_rate` double NOT NULL COMMENT '人民币汇率',
+  `enable_rpc` int(11) DEFAULT NULL COMMENT '是否启用RPC链上交互',
+  `is_platform_coin` int(11) DEFAULT NULL COMMENT '是否平台币',
+  `max_tx_fee` double NOT NULL COMMENT '最大矿工费',
   `max_withdraw_amount` decimal(18,8) DEFAULT NULL COMMENT '最大提币数量',
-  `min_tx_fee` double NOT NULL,
+  `min_tx_fee` double NOT NULL COMMENT '最小矿工费',
   `min_withdraw_amount` decimal(18,8) DEFAULT NULL COMMENT '最小提币数量',
-  `name_cn` varchar(255) NOT NULL,
-  `sort` int(11) NOT NULL,
-  `status` int(11) DEFAULT NULL,
-  `unit` varchar(255) NOT NULL,
-  `usd_rate` double NOT NULL,
-  `withdraw_threshold` decimal(18,8) DEFAULT NULL COMMENT '提现阈值',
-  `has_legal` bit(1) NOT NULL DEFAULT b'0',
-  `cold_wallet_address` varchar(255) DEFAULT NULL,
+  `name_cn` varchar(255) NOT NULL COMMENT '币种中文名',
+  `sort` int(11) NOT NULL COMMENT '排序',
+  `status` int(11) DEFAULT NULL COMMENT '状态0正常等',
+  `unit` varchar(255) NOT NULL COMMENT '显示单位如USDT、BTC',
+  `usd_rate` double NOT NULL COMMENT '美元汇率',
+  `withdraw_threshold` decimal(18,8) DEFAULT NULL COMMENT '提现阈值低于此值不可提',
+  `has_legal` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否有法币对',
+  `cold_wallet_address` varchar(255) DEFAULT NULL COMMENT '冷钱包地址',
   `miner_fee` decimal(18,8) DEFAULT NULL COMMENT '矿工费',
   `withdraw_scale` int(11) DEFAULT '4' COMMENT '提币精度',
-  `information` varchar(255) DEFAULT NULL,
-  `infolink` varchar(255) DEFAULT NULL,
+  `information` varchar(255) DEFAULT NULL COMMENT '币种介绍',
+  `infolink` varchar(255) DEFAULT NULL COMMENT '币种介绍链接',
   `account_type` int(11) DEFAULT '0' COMMENT '币种账户类型',
-  `deposit_address` varchar(255) DEFAULT NULL,
+  `deposit_address` varchar(255) DEFAULT NULL COMMENT '充值地址若统一分配',
   `min_recharge_amount` decimal(18,8) DEFAULT NULL COMMENT '最小充值数量',
   PRIMARY KEY (`name`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='平台支持的币种主数据';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -610,7 +610,7 @@ CREATE TABLE `contract_coin` (
   `type` int(11) DEFAULT '0' COMMENT '合约类型',
   `visible` int(2) DEFAULT '1' COMMENT '前台可见状态',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COMMENT='合约交易对配置';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -649,7 +649,7 @@ CREATE TABLE `contract_option` (
   `total_sell` decimal(18,8) DEFAULT '0.00000000' COMMENT '买跌奖池总金额',
   `total_sell_count` int(11) DEFAULT '0' COMMENT '买涨人数',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12729 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=12729 DEFAULT CHARSET=utf8 COMMENT='期权预测合约配置';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -695,7 +695,7 @@ CREATE TABLE `contract_option_coin` (
   `visible` int(2) DEFAULT '1' COMMENT '前台可见状态',
   `win_fee_percent` decimal(8,4) DEFAULT '0.0010' COMMENT '赢家手续费',
   PRIMARY KEY (`symbol`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='期权合约与币种';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -732,7 +732,7 @@ CREATE TABLE `contract_option_order` (
   `symbol` varchar(255) DEFAULT NULL,
   `win_fee` decimal(18,8) DEFAULT '0.00000000' COMMENT '抽水',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8 COMMENT='期权预测订单';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -782,7 +782,7 @@ CREATE TABLE `contract_order_entrust` (
   `type` int(11) DEFAULT NULL,
   `volume` decimal(18,8) DEFAULT '0.00000000' COMMENT '委托数量',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=423 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=423 DEFAULT CHARSET=utf8 COMMENT='合约委托单';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -810,7 +810,7 @@ CREATE TABLE `country` (
   `local_currency` varchar(255) DEFAULT NULL,
   `sort` int(11) NOT NULL,
   PRIMARY KEY (`zh_name`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='国家地区手机区号等';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -841,7 +841,7 @@ CREATE TABLE `ctc_acceptor` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FKk3nfn54patdd6rwa0skk70tq6` (`member_id`) USING BTREE,
   CONSTRAINT `FKk3nfn54patdd6rwa0skk70tq6` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='C2C承兑商';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -894,7 +894,7 @@ CREATE TABLE `ctc_order` (
   KEY `FK419ewpncecgofa3j1338d6ma6` (`member_id`) USING BTREE,
   CONSTRAINT `FK419ewpncecgofa3j1338d6ma6` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`),
   CONSTRAINT `FKgk8nq4d3ouoj9eyo1kfqtw0wq` FOREIGN KEY (`acceptor_id`) REFERENCES `member` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='C2C订单法币买卖';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -921,7 +921,7 @@ CREATE TABLE `data_dictionary` (
   `update_time` datetime DEFAULT NULL,
   `value` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='数据字典如开关配置';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -950,7 +950,7 @@ CREATE TABLE `department` (
   `update_time` datetime DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `UK_1t68827l97cwyxo9r1u6t4p7d` (`name`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COMMENT='部门后台组织';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -971,17 +971,17 @@ DROP TABLE IF EXISTS `deposit_record`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `deposit_record` (
-  `id` varchar(255) NOT NULL,
-  `amount` decimal(19,2) DEFAULT NULL,
-  `status` int(11) DEFAULT NULL,
-  `coin_id` varchar(255) DEFAULT NULL,
-  `member_id` bigint(20) DEFAULT NULL,
+  `id` varchar(255) NOT NULL COMMENT '记录唯一ID',
+  `amount` decimal(19,2) DEFAULT NULL COMMENT '充值数量',
+  `status` int(11) DEFAULT NULL COMMENT '状态',
+  `coin_id` varchar(255) DEFAULT NULL COMMENT '币种',
+  `member_id` bigint(20) DEFAULT NULL COMMENT '用户ID',
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FK7x5q0lmqqtty5i0w5mq09o8r7` (`coin_id`) USING BTREE,
   KEY `FKji8p5uoc1ad45npyf72rgf2lx` (`member_id`) USING BTREE,
   CONSTRAINT `FK7x5q0lmqqtty5i0w5mq09o8r7` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`),
   CONSTRAINT `FKji8p5uoc1ad45npyf72rgf2lx` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='充值记录业务侧';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1015,7 +1015,7 @@ CREATE TABLE `dividend_start_record` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FK226c1iy2t1dt9tjjo20pum39d` (`admin_id`) USING BTREE,
   CONSTRAINT `FK226c1iy2t1dt9tjjo20pum39d` FOREIGN KEY (`admin_id`) REFERENCES `admin` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='分红发放记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1035,14 +1035,14 @@ DROP TABLE IF EXISTS `exchange_coin`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `exchange_coin` (
-  `symbol` varchar(255) NOT NULL,
-  `base_coin_scale` int(11) NOT NULL,
-  `base_symbol` varchar(255) DEFAULT NULL,
-  `coin_scale` int(11) NOT NULL,
-  `coin_symbol` varchar(255) DEFAULT NULL,
-  `enable` int(11) NOT NULL,
+  `symbol` varchar(255) NOT NULL COMMENT '交易对如BTC/USDT',
+  `base_coin_scale` int(11) NOT NULL COMMENT '计价币精度',
+  `base_symbol` varchar(255) DEFAULT NULL COMMENT '计价币如USDT',
+  `coin_scale` int(11) NOT NULL COMMENT '交易币精度',
+  `coin_symbol` varchar(255) DEFAULT NULL COMMENT '交易币如BTC',
+  `enable` int(11) NOT NULL COMMENT '是否启用0否1是',
   `fee` decimal(8,4) DEFAULT NULL COMMENT '交易手续费',
-  `sort` int(11) NOT NULL,
+  `sort` int(11) NOT NULL COMMENT '排序',
   `enable_market_buy` int(11) DEFAULT '1' COMMENT '是否启用市价买',
   `enable_market_sell` int(11) DEFAULT '1' COMMENT '是否启用市价卖',
   `min_sell_price` decimal(18,8) DEFAULT NULL COMMENT '最低挂单卖价',
@@ -1053,7 +1053,7 @@ CREATE TABLE `exchange_coin` (
   `min_turnover` decimal(18,8) DEFAULT NULL COMMENT '最小挂单成交额',
   `max_volume` decimal(18,8) DEFAULT NULL COMMENT '最大下单量',
   `min_volume` decimal(18,8) DEFAULT NULL COMMENT '最小下单量',
-  `zone` int(11) DEFAULT '0',
+  `zone` int(11) DEFAULT '0' COMMENT '分区',
   `clear_time` varchar(30) DEFAULT '1' COMMENT '清盘时间',
   `end_time` varchar(30) DEFAULT '1' COMMENT '结束时间',
   `publish_price` decimal(18,8) DEFAULT NULL COMMENT ' 分摊发行价格',
@@ -1067,7 +1067,7 @@ CREATE TABLE `exchange_coin` (
   `enable_buy` int(11) DEFAULT '1' COMMENT '是否允许买',
   `enable_sell` int(11) DEFAULT '1' COMMENT '是否允许卖',
   PRIMARY KEY (`symbol`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='币币交易对配置';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1093,7 +1093,7 @@ CREATE TABLE `exchange_favor_symbol` (
   `member_id` bigint(20) DEFAULT NULL,
   `symbol` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=543 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=543 DEFAULT CHARSET=utf8 COMMENT='用户收藏交易对';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1114,25 +1114,25 @@ DROP TABLE IF EXISTS `exchange_order`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `exchange_order` (
-  `order_id` varchar(255) NOT NULL,
-  `amount` decimal(18,8) DEFAULT NULL,
-  `base_symbol` varchar(255) DEFAULT NULL,
-  `canceled_time` bigint(20) DEFAULT NULL,
-  `coin_symbol` varchar(255) DEFAULT NULL,
-  `completed_time` bigint(20) DEFAULT NULL,
-  `direction` int(11) DEFAULT NULL,
-  `member_id` bigint(20) DEFAULT NULL,
-  `price` decimal(18,8) DEFAULT NULL,
-  `status` int(11) DEFAULT NULL,
-  `symbol` varchar(255) DEFAULT NULL,
-  `time` bigint(20) DEFAULT NULL,
-  `traded_amount` decimal(26,16) DEFAULT NULL,
-  `turnover` decimal(26,16) DEFAULT NULL,
-  `type` int(11) DEFAULT NULL,
-  `use_discount` varchar(255) DEFAULT NULL,
-  `order_resource` int(11) DEFAULT NULL,
+  `order_id` varchar(255) NOT NULL COMMENT '订单唯一ID',
+  `amount` decimal(18,8) DEFAULT NULL COMMENT '委托数量',
+  `base_symbol` varchar(255) DEFAULT NULL COMMENT '计价币如USDT',
+  `canceled_time` bigint(20) DEFAULT NULL COMMENT '撤单时间戳',
+  `coin_symbol` varchar(255) DEFAULT NULL COMMENT '交易币如BTC',
+  `completed_time` bigint(20) DEFAULT NULL COMMENT '完全成交时间戳',
+  `direction` int(11) DEFAULT NULL COMMENT '方向0买1卖',
+  `member_id` bigint(20) DEFAULT NULL COMMENT '用户ID',
+  `price` decimal(18,8) DEFAULT NULL COMMENT '委托价格限价单',
+  `status` int(11) DEFAULT NULL COMMENT '状态0已取消1未成交2部分成交3完全成交',
+  `symbol` varchar(255) DEFAULT NULL COMMENT '交易对如BTC/USDT',
+  `time` bigint(20) DEFAULT NULL COMMENT '下单时间戳',
+  `traded_amount` decimal(26,16) DEFAULT NULL COMMENT '已成交数量',
+  `turnover` decimal(26,16) DEFAULT NULL COMMENT '成交额',
+  `type` int(11) DEFAULT NULL COMMENT '类型0市价1限价',
+  `use_discount` varchar(255) DEFAULT NULL COMMENT '是否使用折扣',
+  `order_resource` int(11) DEFAULT NULL COMMENT '订单来源APP/Web/API',
   PRIMARY KEY (`order_id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='币币委托订单';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1159,7 +1159,7 @@ CREATE TABLE `feedback` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FKmonjtjt92g6gruqyfumtmg8m8` (`member_id`) USING BTREE,
   CONSTRAINT `FKmonjtjt92g6gruqyfumtmg8m8` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8 COMMENT='用户反馈';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1192,7 +1192,7 @@ CREATE TABLE `financial_item` (
   `update_time` datetime DEFAULT NULL,
   `yield` double DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='理财项目';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1226,7 +1226,7 @@ CREATE TABLE `financial_order` (
   `real_income` decimal(19,2) DEFAULT NULL,
   `update_time` datetime DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='理财订单';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1256,7 +1256,7 @@ CREATE TABLE `hot_transfer_record` (
   `transfer_time` datetime DEFAULT NULL,
   `unit` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COMMENT='热钱包归集记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1284,7 +1284,7 @@ CREATE TABLE `init_plate` (
   `relative_time` varchar(255) DEFAULT NULL,
   `symbol` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='机器人初始盘口参数';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1323,7 +1323,7 @@ CREATE TABLE `legal_wallet_recharge` (
   CONSTRAINT `FK170xpb7hoxqoj5ovdrcibs9gn` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`),
   CONSTRAINT `FKsdtoqyvbjpd0bmw4n41ijc0kk` FOREIGN KEY (`coin_name`) REFERENCES `coin` (`name`),
   CONSTRAINT `FKtfjvrkn1oe0yu2tfjh6qcms73` FOREIGN KEY (`admin_id`) REFERENCES `admin` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='法币充值记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1362,7 +1362,7 @@ CREATE TABLE `legal_wallet_withdraw` (
   CONSTRAINT `FKbilsav1ug8vjtn4ffghrlogqx` FOREIGN KEY (`coin_name`) REFERENCES `coin` (`name`),
   CONSTRAINT `FKcpw5k7o3tchlifu1wqmjhku9t` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`),
   CONSTRAINT `FKe95o0059kwsgmsxxv3amdb0d2` FOREIGN KEY (`admin_id`) REFERENCES `admin` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='法币提现记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1405,7 +1405,7 @@ CREATE TABLE `locked_order` (
   `total_locked` decimal(18,8) DEFAULT NULL COMMENT '总锁仓',
   `total_release` decimal(18,8) DEFAULT NULL COMMENT '总释放',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='锁仓订单';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1432,7 +1432,7 @@ CREATE TABLE `locked_order_detail` (
   `output` decimal(18,8) DEFAULT NULL COMMENT '矿机当期产出',
   `release_unit` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='锁仓订单明细';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1452,63 +1452,63 @@ DROP TABLE IF EXISTS `member`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `member` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `ali_no` varchar(255) DEFAULT NULL,
-  `qr_code_url` varchar(255) DEFAULT NULL,
-  `appeal_success_times` int(11) NOT NULL,
-  `appeal_times` int(11) NOT NULL,
-  `application_time` datetime DEFAULT NULL,
-  `avatar` varchar(255) DEFAULT NULL,
-  `bank` varchar(255) DEFAULT NULL,
-  `branch` varchar(255) DEFAULT NULL,
-  `card_no` varchar(255) DEFAULT NULL,
-  `certified_business_apply_time` datetime DEFAULT NULL,
-  `certified_business_check_time` datetime DEFAULT NULL,
-  `certified_business_status` int(11) DEFAULT NULL,
-  `email` varchar(255) DEFAULT NULL,
-  `first_level` int(11) NOT NULL,
-  `google_date` datetime DEFAULT NULL,
-  `google_key` varchar(255) DEFAULT NULL,
-  `google_state` int(11) DEFAULT NULL,
-  `id_number` varchar(255) DEFAULT NULL,
-  `inviter_id` bigint(20) DEFAULT NULL,
-  `jy_password` varchar(255) DEFAULT NULL,
-  `last_login_time` datetime DEFAULT NULL,
-  `city` varchar(255) DEFAULT NULL,
-  `country` varchar(255) DEFAULT NULL,
-  `district` varchar(255) DEFAULT NULL,
-  `province` varchar(255) DEFAULT NULL,
-  `login_count` int(11) NOT NULL,
-  `margin` varchar(255) DEFAULT NULL,
-  `member_level` int(11) DEFAULT NULL,
-  `mobile_phone` varchar(255) DEFAULT NULL,
-  `password` varchar(255) NOT NULL,
-  `promotion_code` varchar(255) DEFAULT NULL,
-  `publish_advertise` int(11) DEFAULT NULL,
-  `real_name` varchar(255) DEFAULT NULL,
-  `real_name_status` int(11) DEFAULT NULL,
-  `registration_time` datetime DEFAULT NULL,
-  `salt` varchar(255) DEFAULT NULL,
-  `second_level` int(11) NOT NULL,
-  `sign_in_ability` bit(1) NOT NULL DEFAULT b'1',
-  `status` int(11) DEFAULT NULL,
-  `super_partner` varchar(255) DEFAULT NULL,
-  `third_level` int(11) NOT NULL,
-  `token` varchar(255) DEFAULT NULL,
-  `token_expire_time` datetime DEFAULT NULL,
-  `transaction_status` int(11) DEFAULT NULL,
-  `transactions` int(11) NOT NULL,
-  `username` varchar(255) NOT NULL,
-  `qr_we_code_url` varchar(255) DEFAULT NULL,
-  `wechat` varchar(255) DEFAULT NULL,
-  `local` varchar(255) DEFAULT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '用户ID',
+  `ali_no` varchar(255) DEFAULT NULL COMMENT '支付宝账号',
+  `qr_code_url` varchar(255) DEFAULT NULL COMMENT '收款二维码URL',
+  `appeal_success_times` int(11) NOT NULL COMMENT '申诉成功次数',
+  `appeal_times` int(11) NOT NULL COMMENT '申诉次数',
+  `application_time` datetime DEFAULT NULL COMMENT '申请时间如认证',
+  `avatar` varchar(255) DEFAULT NULL COMMENT '头像URL',
+  `bank` varchar(255) DEFAULT NULL COMMENT '开户行OTC收款',
+  `branch` varchar(255) DEFAULT NULL COMMENT '支行',
+  `card_no` varchar(255) DEFAULT NULL COMMENT '银行卡号',
+  `certified_business_apply_time` datetime DEFAULT NULL COMMENT '商家认证申请时间',
+  `certified_business_check_time` datetime DEFAULT NULL COMMENT '商家认证审核时间',
+  `certified_business_status` int(11) DEFAULT NULL COMMENT '商家认证状态',
+  `email` varchar(255) DEFAULT NULL COMMENT '邮箱',
+  `first_level` int(11) NOT NULL COMMENT '一级邀请人数',
+  `google_date` datetime DEFAULT NULL COMMENT '谷歌验证绑定时间',
+  `google_key` varchar(255) DEFAULT NULL COMMENT '谷歌验证密钥',
+  `google_state` int(11) DEFAULT NULL COMMENT '谷歌验证状态',
+  `id_number` varchar(255) DEFAULT NULL COMMENT '身份证号',
+  `inviter_id` bigint(20) DEFAULT NULL COMMENT '邀请人ID',
+  `jy_password` varchar(255) DEFAULT NULL COMMENT '交易资金密码',
+  `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
+  `city` varchar(255) DEFAULT NULL COMMENT '城市',
+  `country` varchar(255) DEFAULT NULL COMMENT '国家',
+  `district` varchar(255) DEFAULT NULL COMMENT '区县',
+  `province` varchar(255) DEFAULT NULL COMMENT '省份',
+  `login_count` int(11) NOT NULL COMMENT '登录次数',
+  `margin` varchar(255) DEFAULT NULL COMMENT '保证金等扩展',
+  `member_level` int(11) DEFAULT NULL COMMENT '用户等级',
+  `mobile_phone` varchar(255) DEFAULT NULL COMMENT '手机号',
+  `password` varchar(255) NOT NULL COMMENT '登录密码加密',
+  `promotion_code` varchar(255) DEFAULT NULL COMMENT '推广码',
+  `publish_advertise` int(11) DEFAULT NULL COMMENT '是否可发布广告',
+  `real_name` varchar(255) DEFAULT NULL COMMENT '真实姓名',
+  `real_name_status` int(11) DEFAULT NULL COMMENT '实名状态0未认证1审核中2通过',
+  `registration_time` datetime DEFAULT NULL COMMENT '注册时间',
+  `salt` varchar(255) DEFAULT NULL COMMENT '密码盐',
+  `second_level` int(11) NOT NULL COMMENT '二级邀请人数',
+  `sign_in_ability` bit(1) NOT NULL DEFAULT b'1' COMMENT '是否可签到',
+  `status` int(11) DEFAULT NULL COMMENT '账号状态',
+  `super_partner` varchar(255) DEFAULT NULL COMMENT '超级合伙人标识',
+  `third_level` int(11) NOT NULL COMMENT '三级邀请人数',
+  `token` varchar(255) DEFAULT NULL COMMENT '登录token',
+  `token_expire_time` datetime DEFAULT NULL COMMENT 'token过期时间',
+  `transaction_status` int(11) DEFAULT NULL COMMENT '交易权限',
+  `transactions` int(11) NOT NULL COMMENT '交易次数',
+  `username` varchar(255) NOT NULL COMMENT '登录用户名',
+  `qr_we_code_url` varchar(255) DEFAULT NULL COMMENT '微信收款二维码URL',
+  `wechat` varchar(255) DEFAULT NULL COMMENT '微信号',
+  `local` varchar(255) DEFAULT NULL COMMENT '国家地区FK country.zh_name',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `UK_gc3jmn7c2abyo3wf6syln5t2i` (`username`) USING BTREE,
   UNIQUE KEY `UK_mbmcqelty0fbrvxp1q58dn57t` (`email`) USING BTREE,
   UNIQUE KEY `UK_10ixebfiyeqolglpuye0qb49u` (`mobile_phone`) USING BTREE,
   KEY `FKbt72vgf5myy3uhygc90xna65j` (`local`) USING BTREE,
   CONSTRAINT `FKbt72vgf5myy3uhygc90xna65j` FOREIGN KEY (`local`) REFERENCES `country` (`zh_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=600812 DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=600812 DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='用户会员主表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 INSERT INTO `member` (`id`,`ali_no`,`qr_code_url`,`appeal_success_times`,`appeal_times`,`application_time`,`avatar`,`bank`,`branch`,`card_no`,`certified_business_apply_time`,`certified_business_check_time`,`certified_business_status`,`email`,`first_level`,`google_date`,`google_key`,`google_state`,`id_number`,`inviter_id`,`jy_password`,`last_login_time`,`city`,`country`,`district`,`province`,`login_count`,`margin`,`member_level`,`mobile_phone`,`password`,`promotion_code`,`publish_advertise`,`real_name`,`real_name_status`,`registration_time`,`salt`,`second_level`,`sign_in_ability`,`status`,`super_partner`,`third_level`,`token`,`token_expire_time`,`transaction_status`,`transactions`,`username`,`qr_we_code_url`,`wechat`,`local`) VALUES (5,null,null,0,0,null,'https://bizzan.oss-cn-hangzhou.aliyuncs.com/defaultavatar.png',null,null,null,null,null,0,null,0,null,null,null,null,null,null,null,null,'中国',null,null,54,null,0,'13800138020','c0e03b366e431f458ffa41c1fd677107','0QG9',1,null,0,'2025-05-29 19:08:41','393834313732313239363839393331373736',0,b'1',0,'0',0,'40f932cb-a283-44b6-b028-3fc0690d3a34','2025-07-19 14:53:25',1,0,'hello',null,null,'中国');
@@ -1543,7 +1543,7 @@ CREATE TABLE `member_address` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FKhcqqqntcf8hqmoa6dpo95okyh` (`coin_id`) USING BTREE,
   CONSTRAINT `FKhcqqqntcf8hqmoa6dpo95okyh` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户充值提币地址';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1573,7 +1573,7 @@ CREATE TABLE `member_api_key` (
   `remark` varchar(255) DEFAULT NULL,
   `secret_key` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户API Key';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1607,7 +1607,7 @@ CREATE TABLE `member_application` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FK2djx7q0j54th0cgj7153qfbl1` (`member_id`) USING BTREE,
   CONSTRAINT `FK2djx7q0j54th0cgj7153qfbl1` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='用户应用如子账户';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1634,7 +1634,7 @@ CREATE TABLE `member_application_config` (
   `transaction_on` int(11) DEFAULT NULL,
   `withdraw_coin_on` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='应用配置';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1662,7 +1662,7 @@ CREATE TABLE `member_bonus` (
   `member_id` bigint(20) DEFAULT NULL,
   `total` decimal(18,8) DEFAULT NULL COMMENT '当天总手续费',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户分红奖励';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1719,7 +1719,7 @@ CREATE TABLE `member_contract_wallet` (
   UNIQUE KEY `UKe17oj0my6ih9ejhlw6m84l1cd` (`member_id`,`contract_id`),
   KEY `FKni1vfmlpo78vdm4tvr5woqvpo` (`contract_id`),
   CONSTRAINT `FKni1vfmlpo78vdm4tvr5woqvpo` FOREIGN KEY (`contract_id`) REFERENCES `contract_coin` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=109 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=109 DEFAULT CHARSET=utf8 COMMENT='用户合约账户';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1749,7 +1749,7 @@ CREATE TABLE `member_deposit` (
   `unit` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `UKl2ibi99fuxplt8qt3rrpb0q4w` (`txid`,`address`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8 COMMENT='用户充值记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1786,7 +1786,7 @@ CREATE TABLE `member_invite_stastic` (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `member_id` (`member_id`) USING BTREE,
   UNIQUE KEY `UK4o6jykp20ax1pybxgxcwsxq01` (`member_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=59277 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=59277 DEFAULT CHARSET=utf8 COMMENT='邀请统计';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1816,7 +1816,7 @@ CREATE TABLE `member_invite_stastic_rank` (
   `type` int(11) NOT NULL,
   `user_identify` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='邀请排行榜';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1841,7 +1841,7 @@ CREATE TABLE `member_level` (
   `name` varchar(255) NOT NULL,
   `remark` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户等级';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1867,7 +1867,7 @@ CREATE TABLE `member_promotion` (
   `level` int(11) DEFAULT NULL,
   `create_time` datetime DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=9360 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=9360 DEFAULT CHARSET=utf8 COMMENT='推广关系';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1901,7 +1901,7 @@ CREATE TABLE `member_sign_record` (
   CONSTRAINT `FK2r4i90tejcbf85vhk0d8besle` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`),
   CONSTRAINT `FK7qa42qkaoqxlyvwhxwdstclic` FOREIGN KEY (`coin_name`) REFERENCES `coin` (`name`),
   CONSTRAINT `FKq1926wgosqk7ka4kvw8rtxew` FOREIGN KEY (`sign_id`) REFERENCES `sign` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='签到记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1933,7 +1933,7 @@ CREATE TABLE `member_transaction` (
   `symbol` varchar(255) DEFAULT NULL,
   `type` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=2366259 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=2366259 DEFAULT CHARSET=utf8 COMMENT='用户交易流水资金变动类型';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1953,20 +1953,20 @@ DROP TABLE IF EXISTS `member_wallet`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `member_wallet` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `address` varchar(255) DEFAULT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `address` varchar(255) DEFAULT NULL COMMENT '该币种充值地址由钱包服务生成',
   `balance` decimal(26,16) DEFAULT NULL COMMENT '可用余额',
-  `frozen_balance` decimal(26,16) DEFAULT NULL COMMENT '冻结余额',
-  `is_lock` int(11) DEFAULT '0' COMMENT '钱包不是锁定',
-  `member_id` bigint(20) DEFAULT NULL,
-  `to_released` decimal(18,8) DEFAULT NULL COMMENT '待释放总量',
-  `version` int(11) NOT NULL,
-  `coin_id` varchar(255) DEFAULT NULL,
+  `frozen_balance` decimal(26,16) DEFAULT NULL COMMENT '冻结余额挂单占用',
+  `is_lock` int(11) DEFAULT '0' COMMENT '是否锁定0否1是',
+  `member_id` bigint(20) DEFAULT NULL COMMENT '用户ID',
+  `to_released` decimal(18,8) DEFAULT NULL COMMENT '待释放数量锁仓等活动',
+  `version` int(11) NOT NULL COMMENT '乐观锁版本号',
+  `coin_id` varchar(255) DEFAULT NULL COMMENT '币种FK coin.name',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `UKm68bscpof0bpnxocxl4qdnvbe` (`member_id`,`coin_id`) USING BTREE,
   KEY `FKf9tgbp9y9py8t9c5xj0lllcib` (`coin_id`) USING BTREE,
   CONSTRAINT `FKf9tgbp9y9py8t9c5xj0lllcib` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=191 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=191 DEFAULT CHARSET=utf8 COMMENT='用户各币种钱包余额冻结';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2002,16 +2002,16 @@ DROP TABLE IF EXISTS `member_wallet_history`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `member_wallet_history` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `member_id` int(11) NOT NULL,
-  `coin_id` varchar(255) NOT NULL,
-  `before_balance` decimal(18,8) NOT NULL,
-  `after_balance` decimal(18,8) DEFAULT NULL,
-  `before_frozen_balance` decimal(18,8) DEFAULT NULL,
-  `after_frozen_balance` decimal(18,8) DEFAULT NULL,
-  `op_time` datetime DEFAULT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `member_id` int(11) NOT NULL COMMENT '用户ID',
+  `coin_id` varchar(255) NOT NULL COMMENT '币种',
+  `before_balance` decimal(18,8) NOT NULL COMMENT '变更前可用余额',
+  `after_balance` decimal(18,8) DEFAULT NULL COMMENT '变更后可用余额',
+  `before_frozen_balance` decimal(18,8) DEFAULT NULL COMMENT '变更前冻结余额',
+  `after_frozen_balance` decimal(18,8) DEFAULT NULL COMMENT '变更后冻结余额',
+  `op_time` datetime DEFAULT NULL COMMENT '操作时间',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=4667071 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=4667071 DEFAULT CHARSET=utf8 COMMENT='钱包变动流水';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2050,7 +2050,7 @@ CREATE TABLE `mining_order` (
   `total_profit` decimal(18,8) DEFAULT NULL COMMENT '矿机总产出',
   `type` int(11) NOT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='挖矿订单';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2077,7 +2077,7 @@ CREATE TABLE `mining_order_detail` (
   `mining_unit` varchar(255) DEFAULT NULL,
   `output` decimal(18,8) DEFAULT NULL COMMENT '矿机当期产出',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='挖矿订单明细';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2108,7 +2108,7 @@ CREATE TABLE `otc_coin` (
   `status` int(11) DEFAULT NULL,
   `unit` varchar(255) NOT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='OTC支持的币种';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2167,7 +2167,7 @@ CREATE TABLE `otc_order` (
   UNIQUE KEY `UK_qmfpakgu6mowmslv4m5iy43t9` (`order_sn`) USING BTREE,
   KEY `FKjh47nnmiehmu15wqjfwnh8a6u` (`coin_id`) USING BTREE,
   CONSTRAINT `FKjh47nnmiehmu15wqjfwnh8a6u` FOREIGN KEY (`coin_id`) REFERENCES `otc_coin` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8 COMMENT='OTC订单';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2207,7 +2207,7 @@ CREATE TABLE `promotion_card` (
   UNIQUE KEY `UK_3781uubel3iuh86ht6yv0n0r7` (`card_no`) USING BTREE,
   KEY `FKem2r42s1av7tfni612176gt9f` (`coin_id`) USING BTREE,
   CONSTRAINT `FKem2r42s1av7tfni612176gt9f` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COMMENT='推广卡';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2240,7 +2240,7 @@ CREATE TABLE `promotion_card_order` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FK1e6ykywfbw68oodq33no4ao8u` (`card_id`) USING BTREE,
   CONSTRAINT `FK1e6ykywfbw68oodq33no4ao8u` FOREIGN KEY (`card_id`) REFERENCES `promotion_card` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8 COMMENT='推广卡订单';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2271,7 +2271,7 @@ CREATE TABLE `quick_exchange` (
   `status` int(11) NOT NULL,
   `to_unit` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='闪兑配置记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2314,7 +2314,7 @@ CREATE TABLE `red_envelope` (
   `invite_user_avatar` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `UK_kpc525u446ufbpp8a8wxq6b93` (`envelope_no`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='红包';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2342,7 +2342,7 @@ CREATE TABLE `red_envelope_detail` (
   `member_id` bigint(20) NOT NULL,
   `user_identify` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='红包明细';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2374,7 +2374,7 @@ CREATE TABLE `reward_activity_setting` (
   KEY `FKmxq57nrqt4lb9lqpxwc095h1h` (`coin_id`) USING BTREE,
   CONSTRAINT `FKmxq57nrqt4lb9lqpxwc095h1h` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`),
   CONSTRAINT `FKra9w7qwgbxti55cmkb6kycau7` FOREIGN KEY (`admin_id`) REFERENCES `admin` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='活动奖励配置';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2407,7 +2407,7 @@ CREATE TABLE `reward_promotion_setting` (
   KEY `FKfhtlsn9g8lj5qecbo596ymhey` (`coin_id`) USING BTREE,
   CONSTRAINT `FK7fl96plmj12crmepem7t876u3` FOREIGN KEY (`admin_id`) REFERENCES `admin` (`id`),
   CONSTRAINT `FKfhtlsn9g8lj5qecbo596ymhey` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='推广奖励配置';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2440,7 +2440,7 @@ CREATE TABLE `reward_record` (
   KEY `FK9m2bd6gjgad67vb6of4waxtov` (`member_id`) USING BTREE,
   CONSTRAINT `FK9m2bd6gjgad67vb6of4waxtov` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`),
   CONSTRAINT `FKtm2ha75hh60am8n7lco838nmo` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8 COMMENT='奖励发放记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2470,7 +2470,7 @@ CREATE TABLE `sign` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FK58kn2gi7nvswa8hb76h87wtdl` (`coin_name`) USING BTREE,
   CONSTRAINT `FK58kn2gi7nvswa8hb76h87wtdl` FOREIGN KEY (`coin_name`) REFERENCES `coin` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='签到配置';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2505,7 +2505,7 @@ CREATE TABLE `sys_advertise` (
   `url` varchar(255) DEFAULT NULL,
   `lang` varchar(255) NOT NULL,
   PRIMARY KEY (`serial_number`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='系统广告位';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2538,7 +2538,7 @@ CREATE TABLE `sys_help` (
   `title` varchar(255) NOT NULL,
   `lang` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COMMENT='帮助文档';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2567,7 +2567,7 @@ CREATE TABLE `tb_sms` (
   `sms_status` varchar(255) DEFAULT NULL,
   `template_id` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='短信记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2597,7 +2597,7 @@ CREATE TABLE `transfer_address` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FK7iv0cmmj36ncaw1nx92x15vtu` (`coin_id`) USING BTREE,
   CONSTRAINT `FK7iv0cmmj36ncaw1nx92x15vtu` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='内部转账地址白名单';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2629,7 +2629,7 @@ CREATE TABLE `transfer_record` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FKkrlf3bglmf2c51sorq9fpue0g` (`coin_id`) USING BTREE,
   CONSTRAINT `FKkrlf3bglmf2c51sorq9fpue0g` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='内部转账记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2657,7 +2657,7 @@ CREATE TABLE `wallet_trans_record` (
   `target` int(11) DEFAULT '0' COMMENT '划转到哪里去',
   `unit` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COMMENT='钱包交易记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2690,7 +2690,7 @@ CREATE TABLE `website_information` (
   `postcode` varchar(255) DEFAULT NULL,
   `url` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='网站配置';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2723,7 +2723,7 @@ CREATE TABLE `withdraw_code_record` (
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FKa3kybqr5vhpnf5a57ridds671` (`coin_id`) USING BTREE,
   CONSTRAINT `FKa3kybqr5vhpnf5a57ridds671` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='提币验证码安全记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2744,27 +2744,27 @@ DROP TABLE IF EXISTS `withdraw_record`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `withdraw_record` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `address` varchar(255) DEFAULT NULL,
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `address` varchar(255) DEFAULT NULL COMMENT '提币目标地址',
   `arrived_amount` decimal(18,8) DEFAULT NULL COMMENT '预计到账数量',
-  `can_auto_withdraw` int(11) DEFAULT NULL,
-  `create_time` datetime DEFAULT NULL,
-  `deal_time` datetime DEFAULT NULL,
+  `can_auto_withdraw` int(11) DEFAULT NULL COMMENT '是否支持自动提现',
+  `create_time` datetime DEFAULT NULL COMMENT '申请时间',
+  `deal_time` datetime DEFAULT NULL COMMENT '处理完成时间',
   `fee` decimal(18,8) DEFAULT NULL COMMENT '手续费',
-  `is_auto` int(11) DEFAULT NULL,
-  `member_id` bigint(20) DEFAULT NULL,
-  `remark` varchar(255) DEFAULT NULL,
-  `status` int(11) DEFAULT NULL,
+  `is_auto` int(11) DEFAULT NULL COMMENT '是否自动审核通过',
+  `member_id` bigint(20) DEFAULT NULL COMMENT '用户ID',
+  `remark` varchar(255) DEFAULT NULL COMMENT '备注',
+  `status` int(11) DEFAULT NULL COMMENT '状态',
   `total_amount` decimal(18,8) DEFAULT NULL COMMENT '申请总数量',
-  `transaction_number` varchar(255) DEFAULT NULL,
-  `admin_id` bigint(20) DEFAULT NULL,
-  `coin_id` varchar(255) NOT NULL,
+  `transaction_number` varchar(255) DEFAULT NULL COMMENT '链上交易哈希',
+  `admin_id` bigint(20) DEFAULT NULL COMMENT '处理管理员ID',
+  `coin_id` varchar(255) NOT NULL COMMENT '币种',
   PRIMARY KEY (`id`) USING BTREE,
   KEY `FK2lmq6bcbk4nl3hmqcxbnx2kuc` (`admin_id`) USING BTREE,
   KEY `FK6drad9oqabujy0jsre3minxi` (`coin_id`) USING BTREE,
   CONSTRAINT `FK2lmq6bcbk4nl3hmqcxbnx2kuc` FOREIGN KEY (`admin_id`) REFERENCES `admin` (`id`),
   CONSTRAINT `FK6drad9oqabujy0jsre3minxi` FOREIGN KEY (`coin_id`) REFERENCES `coin` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='提币申请与结果';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
