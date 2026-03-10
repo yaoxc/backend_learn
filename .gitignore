@@ -1,3 +1,6 @@
 /target/
 /.idea/
 /sql/data/
+# Ignore local jar libraries
+*.jar
+!**/lib/README.md

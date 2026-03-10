@@ -2,7 +2,6 @@ package com.bizzan.bitrade.controller;
 
 import com.alibaba.fastjson.JSON;
 import com.bizzan.bitrade.constant.BooleanEnum;
-import com.bizzan.bitrade.constant.MemberLevelEnum;
 import com.bizzan.bitrade.constant.SysConstant;
 import com.bizzan.bitrade.entity.*;
 import com.bizzan.bitrade.entity.transform.AuthMember;
@@ -14,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -27,7 +25,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 委托订单处理类
@@ -46,6 +43,10 @@ public class OrderController {
     private CoinService coinService;
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
+    @Value("${exchange.relay.order.ingress-topic:exchange-order-ingress}")
+    private String orderIngressTopic;
+    @Value("${exchange.relay.order.cancel-ingress-topic:exchange-order-cancel-ingress}")
+    private String cancelIngressTopic;
     @Autowired
     private ExchangeOrderDetailService exchangeOrderDetailService;
     @Value("${exchange.max-cancel-times:-1}")
@@ -57,7 +58,7 @@ public class OrderController {
     @Autowired
     private RestTemplate restTemplate;
     @Autowired
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<Object, Object> redisTemplate;
     private SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
@@ -285,8 +286,8 @@ public class OrderController {
             return MessageResult.error(500, "提交订单失败:" + mr.getMessage());
         }
         log.info(">>>>>>>>>>订单提交完成>>>>>>>>>>");
-        // 发送消息至Exchange系统
-        kafkaTemplate.send("exchange-order", JSON.toJSONString(order));
+        // 发送消息至“数据中转服务入口”Topic（由中转服务转发至撮合内部Topic）
+        kafkaTemplate.send(orderIngressTopic, JSON.toJSONString(order));
         MessageResult result = MessageResult.success("success");
         result.setData(order.getOrderId());
         return result;
@@ -527,8 +528,8 @@ public class OrderController {
             return MessageResult.error(500, "提交订单失败:" + mr.getMessage());
         }
         log.info(">>>>>>>>>>订单提交完成>>>>>>>>>>");
-        // 发送消息至Exchange系统
-        kafkaTemplate.send("exchange-order", JSON.toJSONString(order));
+        // 发送消息至“数据中转服务入口”Topic（由中转服务转发至撮合内部Topic）
+        kafkaTemplate.send(orderIngressTopic, JSON.toJSONString(order));
         MessageResult result = MessageResult.success("success");
         result.setData(order.getOrderId());
         return result;
@@ -704,8 +705,8 @@ public class OrderController {
 			}
         }
         if(isExchangeOrderExist(order)){
-            // 发送消息至Exchange系统
-            kafkaTemplate.send("exchange-order-cancel",JSON.toJSONString(order));
+            // 发送撤单消息至“数据中转服务入口”Topic（由中转服务转发至撮合内部Topic）
+            kafkaTemplate.send(cancelIngressTopic,JSON.toJSONString(order));
         }
         else{
             //强制取消
@@ -761,8 +762,8 @@ public class OrderController {
             if (maxCancelTimes > 0 && orderService.findTodayOrderCancelTimes(member.getId(), order.getSymbol()) >= maxCancelTimes) {
                 return MessageResult.error(500, "你今天已经取消了 " + maxCancelTimes + " 次");
             }
-            // 发送消息至Exchange系统
-            kafkaTemplate.send("exchange-order-cancel",JSON.toJSONString(order));
+            // 发送撤单消息至“数据中转服务入口”Topic（由中转服务转发至撮合内部Topic）
+            kafkaTemplate.send(cancelIngressTopic,JSON.toJSONString(order));
         }
         else{
             //强制取消
