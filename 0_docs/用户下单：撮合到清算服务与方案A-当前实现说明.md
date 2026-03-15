@@ -55,7 +55,7 @@
 
 | 角色       | 线程         | 职责 |
 |------------|--------------|------|
-| 撮合线程   | 调用方       | 调用 `publish(MatchResult)`，将结果放入内存队列（offer，超时 100ms）；队列满时打 ERROR 并丢弃本条。 |
+| 撮合线程   | 调用方       | 调用 `publish(MatchResult)`，将结果放入内存队列（`put` 阻塞入队，队列满时等待，保证不丢）。 |
 | Writer 线程 | match-wal-writer-{symbol} | 从队列 poll(1s)，取到则把 `MatchResult` 序列化为一行 JSON + 换行，追加写 WAL 文件并 `flush()`。 |
 | Sender 线程 | match-kafka-sender-{symbol} | 从 WAL 按偏移读行，每行发 Kafka topic `exchange-match-result`，发送成功后把当前字节偏移写入 offset 文件；失败则保持偏移不变，等待下一轮重试。 |
 
@@ -135,6 +135,19 @@
 | exchange-core | ExchangeOrderService.addOrder / addOrderForApi | 下单落库，设置 status=TRADING。 |
 | exchange-core | ExchangeOrderService.tradeCompleted | 完全成交时设置 status=COMPLETED 并退冻结。 |
 | 配置项 | match.wal.path | WAL 根目录，默认 data/wal。 |
+
+---
+
+## 六、与典型 CEX 架构的差异
+
+主流 CEX 常采用「撮合 → 清算 → 结算 → 资金」分层：撮合只产出交易流水，推给**清算系统**；清算系统做清算（手续费、分摊、强平等），**结算系统**按清算结果生成资金指令，**资金系统**再执行划转、落账。即：**撮合只推流水，不直接驱动资金变动**。
+
+本项目中为简化实现，**未单独拆出清算、结算、资金系统**：
+
+- 撮合结果（exchange-match-result）直接推给 **market** 模块。
+- market 内 `ExchangeOrderService.processMatchResult` **一次完成**：落成交明细、更新订单状态、**直接改钱包余额/冻结**、记流水、返佣等，相当于把「清算 + 结算 + 资金处理」合并在同一套落库与资金逻辑中。
+
+若后续要贴近典型 CEX 分层，可考虑：撮合只推送**交易流水**至清算服务，由清算产出清算结果，再经结算生成资金指令，由独立资金系统执行变动；当前实现可作为简化版对照。
 
 ---
 

@@ -85,20 +85,40 @@ public class ExchangeTradeConsumer {
 	public void handleMatchResult(List<ConsumerRecord<String, String>> records) {
 		try {
 			for (ConsumerRecord<String, String> record : records) {
+				// 解析单条 Kafka 消息为 JSON，便于按字段取值
+				// MatchResult 结构：{ "messageId": "1234567890", "symbol": "BTC/USDT", "ts": 1699999999999, "trades": [...], "completedOrders": [...]}
 				JSONObject obj = JSON.parseObject(record.value());
+				// 取出本批成交明细、已完全成交订单两个数组（MatchResult 结构）
 				JSONArray tradesArr = obj.getJSONArray("trades");
 				JSONArray completedArr = obj.getJSONArray("completedOrders");
+				// 反序列化为 ExchangeTrade / ExchangeOrder 列表，空则用空列表避免 NPE
 				List<ExchangeTrade> trades = tradesArr != null ? JSON.parseArray(tradesArr.toJSONString(), ExchangeTrade.class) : java.util.Collections.emptyList();
 				List<ExchangeOrder> completedOrders = completedArr != null ? JSON.parseArray(completedArr.toJSONString(), ExchangeOrder.class) : java.util.Collections.emptyList();
+				// 无成交且无完成订单则跳过，避免无意义落库与推送
 				if (trades.isEmpty() && completedOrders.isEmpty()) {
 					continue;
 				}
-				exchangeOrderService.processMatchResult(trades, completedOrders, secondReferrerAward);
+				// 幂等：有 messageId 时按 messageId 只落库一次，重复消费跳过；无 messageId 时直接落库（兼容旧消息）
+				String messageId = obj.getString("messageId");
+				boolean processed;
+				try {
+					processed = exchangeOrderService.processMatchResultIdempotent(messageId, trades, completedOrders, secondReferrerAward);
+				} catch (Exception ex) {
+					log.error("handleMatchResult processMatchResultIdempotent error", ex);
+					throw ex;
+				}
+				if (!processed) {
+					// 已处理过（重复消费），跳过后续推送
+					continue;
+				}
+				// 取交易对，用于后续推送与行情；若消息未带则从第一笔成交里取
 				String symbol = obj.getString("symbol");
 				if (symbol == null && !trades.isEmpty()) {
 					symbol = trades.get(0).getSymbol();
 				}
+				// 按交易对取行情处理器，用于更新 K 线等
 				CoinProcessor coinProcessor = symbol != null ? coinProcessorFactory.getProcessor(symbol) : null;
+				// 逐笔成交推送给买卖双方：WebSocket 主题 + Netty，便于前端/客户端实时展示部分成交
 				for (ExchangeTrade trade : trades) {
 					ExchangeOrder buyOrder = exchangeOrderService.findOne(trade.getBuyOrderId());
 					ExchangeOrder sellOrder = exchangeOrderService.findOne(trade.getSellOrderId());
@@ -111,12 +131,15 @@ public class ExchangeTradeConsumer {
 						nettyHandler.handleOrder(NettyCommand.PUSH_EXCHANGE_ORDER_TRADE, sellOrder);
 					}
 				}
+				// 更新 K 线等行情数据
 				if (coinProcessor != null && !trades.isEmpty()) {
 					coinProcessor.process(trades);
 				}
+				// 将本批成交加入推送队列，供行情/盘口等对外推送
 				if (symbol != null && !trades.isEmpty()) {
 					pushJob.addTrades(symbol, trades);
 				}
+				// 已完全成交订单推送给对应用户：WebSocket + Netty，通知订单已结束
 				for (ExchangeOrder order : completedOrders) {
 					messagingTemplate.convertAndSend("/topic/market/order-completed/" + order.getSymbol() + "/" + order.getMemberId(), order);
 					nettyHandler.handleOrder(NettyCommand.PUSH_EXCHANGE_ORDER_COMPLETED, order);

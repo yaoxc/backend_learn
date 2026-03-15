@@ -8,8 +8,10 @@ import com.bizzan.bitrade.constant.RewardRecordType;
 import com.bizzan.bitrade.constant.TransactionType;
 import com.bizzan.bitrade.dao.ExchangeOrderDetailRepository;
 import com.bizzan.bitrade.dao.ExchangeOrderRepository;
+import com.bizzan.bitrade.dao.ProcessedMatchResultMessageRepository;
 import com.bizzan.bitrade.dao.OrderDetailAggregationRepository;
 import com.bizzan.bitrade.entity.*;
+import com.bizzan.bitrade.entity.ProcessedMatchResultMessage;
 import com.bizzan.bitrade.pagination.Criteria;
 import com.bizzan.bitrade.pagination.PageResult;
 import com.bizzan.bitrade.pagination.Restrictions;
@@ -69,6 +71,8 @@ public class ExchangeOrderService extends BaseService {
     private RewardRecordService rewardRecordService;
     @Autowired
     private ExchangeOrderDetailService exchangeOrderDetailService;
+    @Autowired
+    private ProcessedMatchResultMessageRepository processedMatchResultMessageRepository;
     @Value("${channel.enable:false}")
     private Boolean channelEnable;
     @Value("${channel.exchange-rate:0.00}")
@@ -326,6 +330,32 @@ public class ExchangeOrderService extends BaseService {
             }
         }
         return MessageResult.success("processMatchResult success");
+    }
+
+    /**
+     * 带 messageId 幂等的落库：同一 messageId 只处理一次，重复消费直接返回 false 不落库。
+     * messageId 为 null 或空时退化为直接调用 processMatchResult（兼容旧消息）。
+     *
+     * @param messageId            MatchResult.messageId，发送时生成的全局 id
+     * @param trades               本批成交明细
+     * @param completedOrders     本批已完全成交订单
+     * @param secondReferrerAward 二级推荐人是否返佣
+     * @return true 已处理（本次落库或 messageId 为空直接落库），false 已处理过（幂等跳过）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean processMatchResultIdempotent(String messageId, List<ExchangeTrade> trades, List<ExchangeOrder> completedOrders, boolean secondReferrerAward) throws Exception {
+        if (messageId == null || messageId.isEmpty()) {
+            processMatchResult(trades, completedOrders, secondReferrerAward);
+            return true;
+        }
+        if (processedMatchResultMessageRepository.existsByMessageId(messageId)) {
+            return false;
+        }
+        ProcessedMatchResultMessage processed = new ProcessedMatchResultMessage();
+        processed.setMessageId(messageId);
+        processedMatchResultMessageRepository.save(processed);
+        processMatchResult(trades, completedOrders, secondReferrerAward);
+        return true;
     }
 
     /**

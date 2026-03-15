@@ -628,10 +628,11 @@ public class CoinTrader {
      */
     private void flushMatchResult(List<ExchangeTrade> trades, List<ExchangeOrder> completedOrders) {
         if (matchResultPublisher != null) {
-            matchResultPublisher.publish(new MatchResult(symbol, System.currentTimeMillis(),
-                    trades != null ? trades : Collections.emptyList(), // 交易流水
-                    completedOrders != null ? completedOrders : Collections.emptyList()) // 已完全成交订单
-                );
+            // 生成全局 messageId，供消费端幂等：同一 messageId 只落库一次
+            String messageId = UUID.randomUUID().toString();
+            matchResultPublisher.publish(new MatchResult(messageId, symbol, System.currentTimeMillis(),
+                    trades != null ? trades : Collections.emptyList(),
+                    completedOrders != null ? completedOrders : Collections.emptyList()));
             return;
         }
 
