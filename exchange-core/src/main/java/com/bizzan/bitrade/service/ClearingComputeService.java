@@ -66,6 +66,7 @@ public class ClearingComputeService {
 
     private ClearingResultDTO.TradeClearingItem computeTradeItem(ExchangeOrder order, ExchangeTrade trade, ExchangeCoin coin) {
         ClearingResultDTO.TradeClearingItem item = new ClearingResultDTO.TradeClearingItem();
+        item.setMemberId(order.getMemberId());
         item.setOrderId(order.getOrderId());
         item.setDirection(order.getDirection() != null ? order.getDirection().name() : null);
 
@@ -116,6 +117,7 @@ public class ClearingComputeService {
         BigDecimal refundAmount = frozenBalance.subtract(dealBalance);
 
         ClearingResultDTO.OrderRefundItem item = new ClearingResultDTO.OrderRefundItem();
+        item.setMemberId(order.getMemberId());
         item.setOrderId(order.getOrderId());
         item.setCoinSymbol(coinSymbol);
         item.setRefundAmount(refundAmount);

@@ -25,6 +25,7 @@ public class ClearingResultDTO implements Serializable {
 
     @Data
     public static class TradeClearingItem implements Serializable {
+        private Long memberId;
         private String orderId;
         private String direction; // BUY / SELL
         private BigDecimal fee;
@@ -36,6 +37,7 @@ public class ClearingResultDTO implements Serializable {
 
     @Data
     public static class OrderRefundItem implements Serializable {
+        private Long memberId;
         private String orderId;
         private String coinSymbol;
         private BigDecimal refundAmount;
