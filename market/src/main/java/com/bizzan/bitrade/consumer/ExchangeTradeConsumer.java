@@ -27,6 +27,7 @@ import com.bizzan.bitrade.handler.NettyHandler;
 import com.bizzan.bitrade.job.ExchangePushJob;
 import com.bizzan.bitrade.processor.CoinProcessor;
 import com.bizzan.bitrade.processor.CoinProcessorFactory;
+import com.bizzan.bitrade.service.ClearingService;
 import com.bizzan.bitrade.service.ExchangeOrderService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +64,8 @@ public class ExchangeTradeConsumer {
 			new LinkedBlockingQueue<Runnable>(1024), new ThreadPoolExecutor.AbortPolicy());
 	@Autowired
 	private ExchangePushJob pushJob;
+	@Autowired
+	private ClearingService clearingService;
 
 	/**
 	 * 处理成交明细（旧路径）。方案 A 下撮合不发此 topic；若与 exchange-match-result 同时有数据，需幂等防重复。
@@ -144,6 +147,9 @@ public class ExchangeTradeConsumer {
 					messagingTemplate.convertAndSend("/topic/market/order-completed/" + order.getSymbol() + "/" + order.getMemberId(), order);
 					nettyHandler.handleOrder(NettyCommand.PUSH_EXCHANGE_ORDER_COMPLETED, order);
 				}
+				// 清算：计算并落库、发 Kafka（幂等按 messageId；发送失败由定时任务重试）
+				Long ts = obj.getLong("ts");
+				clearingService.processAndPublish(messageId, symbol, ts, trades, completedOrders);
 			}
 		} catch (Exception e) {
 			log.error("handleMatchResult error", e);
