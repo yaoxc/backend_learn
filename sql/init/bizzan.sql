@@ -18,6 +18,18 @@
 --
 -- Table structure for table `activity`
 --
+DROP TABLE IF EXISTS `order_kafka_outbox`;
+CREATE TABLE order_kafka_outbox (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  topic VARCHAR(128) NOT NULL,
+  message_key VARCHAR(64) NOT NULL,
+  payload TEXT NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  created_at DATETIME NOT NULL,
+  sent_at DATETIME NULL,
+  INDEX idx_outbox_status (status),
+  INDEX idx_outbox_topic_key (topic, message_key)
+);
 
 DROP TABLE IF EXISTS `activity`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
