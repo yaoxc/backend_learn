@@ -36,6 +36,7 @@ public class ExchangeOrderConsumer {
             }
             CoinTrader trader = traderFactory.getTrader(order.getSymbol());
             // 如果当前币种交易暂停会自动取消订单
+            // halt: 暂停 ready: 完成
             if (trader.isTradingHalt() || !trader.getReady()) {
                 // 撮合器未准备完成，撤回当前等待的订单
                 kafkaTemplate.send("exchange-order-cancel-success", JSON.toJSONString(order));

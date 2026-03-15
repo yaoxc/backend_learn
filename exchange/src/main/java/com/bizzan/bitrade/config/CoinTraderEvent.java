@@ -57,8 +57,10 @@ public class CoinTraderEvent implements ApplicationListener<ContextRefreshedEven
 
                 for(ExchangeOrderDetail tradeDetail : details) {
                     // orderId下  累加计算成交量
+                    // tradedAmount : 成交量 = 成交数量的累加
                     tradedAmount = tradedAmount.add(tradeDetail.getAmount());
                     // orderId下 累加计算成交金额
+                    // turnover : 成交额（成交金额）= 成交数量 × 成交价格
                     turnover = turnover.add(tradeDetail.getAmount().multiply(tradeDetail.getPrice()));
                 }
                 order.setTradedAmount(tradedAmount);

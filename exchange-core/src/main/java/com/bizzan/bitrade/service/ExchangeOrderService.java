@@ -306,6 +306,29 @@ public class ExchangeOrderService extends BaseService {
     }
 
     /**
+     * 【改造范围】方案 A 下游：单条 Kafka 消息（MatchResult）对应一次事务。
+     * 先处理本批所有成交（明细+钱包+流水），再处理本批所有订单完成（状态+退冻结），避免部分成功。
+     *
+     * @param trades            本批成交明细
+     * @param completedOrders   本批已完全成交的订单
+     * @param secondReferrerAward 二级推荐人是否返佣
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public MessageResult processMatchResult(List<ExchangeTrade> trades, List<ExchangeOrder> completedOrders, boolean secondReferrerAward) throws Exception {
+        if (trades != null) {
+            for (ExchangeTrade trade : trades) {
+                processExchangeTrade(trade, secondReferrerAward);
+            }
+        }
+        if (completedOrders != null) {
+            for (ExchangeOrder order : completedOrders) {
+                tradeCompleted(order.getOrderId(), order.getTradedAmount(), order.getTurnover());
+            }
+        }
+        return MessageResult.success("processMatchResult success");
+    }
+
+    /**
      * 对发生交易的委托处理相应的钱包
      *
      * @param order               委托订单

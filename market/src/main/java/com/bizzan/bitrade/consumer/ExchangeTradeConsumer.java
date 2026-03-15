@@ -17,6 +17,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.bizzan.bitrade.constant.NettyCommand;
 import com.bizzan.bitrade.entity.ExchangeOrder;
 import com.bizzan.bitrade.entity.ExchangeTrade;
@@ -29,6 +31,20 @@ import com.bizzan.bitrade.service.ExchangeOrderService;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * 消费撮合结果并落库、推送：成交明细、订单完成、行情等。
+ * <p>
+ * 本类订阅三个 topic：
+ * <ul>
+ *   <li><b>exchange-match-result</b>：方案 A 下撮合引擎唯一出口，单条消息含 trades + completedOrders，单事务处理。</li>
+ *   <li><b>exchange-trade</b>：旧路径，仅成交明细（无 publisher 时由 CoinTrader 直接发送）。</li>
+ *   <li><b>exchange-order-completed</b>：旧路径，仅已完全成交订单（无 publisher 时由 CoinTrader 直接发送）。</li>
+ * </ul>
+ * 方案 A 开启时，撮合只发 exchange-match-result，故通常只有该 topic 有数据。若同时保留三路监听（兼容/灰度/回退），
+ * 同一批结果可能从 exchange-match-result 与旧 topic 各收一次，导致重复落库与重复推送。<br>
+ * <b>因此若同时消费三个 topic，必须在落库侧做幂等</b>：例如按 tradeId 去重成交明细（避免重复加钱、重复写 ExchangeOrderDetail），
+ * 按 orderId 去重订单完成（tradeCompleted 当前对非 TRADING 状态会返回错误，不重复退冻结，但建议显式幂等或统一只消费 exchange-match-result）。
+ */
 @Component
 @Slf4j
 public class ExchangeTradeConsumer {
@@ -49,7 +65,7 @@ public class ExchangeTradeConsumer {
 	private ExchangePushJob pushJob;
 
 	/**
-	 * 处理成交明细
+	 * 处理成交明细（旧路径）。方案 A 下撮合不发此 topic；若与 exchange-match-result 同时有数据，需幂等防重复。
 	 *
 	 * @param records
 	 */
@@ -61,6 +77,59 @@ public class ExchangeTradeConsumer {
 		}
 	}
 
+	/**
+	 * 【改造范围】方案 A：消费单条消息原子的 exchange-match-result（trades + completedOrders 一条）。
+	 * 单事务处理，避免部分成功；并推送行情、订单成交/完成通知。
+	 */
+	@KafkaListener(topics = "exchange-match-result", containerFactory = "kafkaListenerContainerFactory")
+	public void handleMatchResult(List<ConsumerRecord<String, String>> records) {
+		try {
+			for (ConsumerRecord<String, String> record : records) {
+				JSONObject obj = JSON.parseObject(record.value());
+				JSONArray tradesArr = obj.getJSONArray("trades");
+				JSONArray completedArr = obj.getJSONArray("completedOrders");
+				List<ExchangeTrade> trades = tradesArr != null ? JSON.parseArray(tradesArr.toJSONString(), ExchangeTrade.class) : java.util.Collections.emptyList();
+				List<ExchangeOrder> completedOrders = completedArr != null ? JSON.parseArray(completedArr.toJSONString(), ExchangeOrder.class) : java.util.Collections.emptyList();
+				if (trades.isEmpty() && completedOrders.isEmpty()) {
+					continue;
+				}
+				exchangeOrderService.processMatchResult(trades, completedOrders, secondReferrerAward);
+				String symbol = obj.getString("symbol");
+				if (symbol == null && !trades.isEmpty()) {
+					symbol = trades.get(0).getSymbol();
+				}
+				CoinProcessor coinProcessor = symbol != null ? coinProcessorFactory.getProcessor(symbol) : null;
+				for (ExchangeTrade trade : trades) {
+					ExchangeOrder buyOrder = exchangeOrderService.findOne(trade.getBuyOrderId());
+					ExchangeOrder sellOrder = exchangeOrderService.findOne(trade.getSellOrderId());
+					if (buyOrder != null) {
+						messagingTemplate.convertAndSend("/topic/market/order-trade/" + symbol + "/" + buyOrder.getMemberId(), buyOrder);
+						nettyHandler.handleOrder(NettyCommand.PUSH_EXCHANGE_ORDER_TRADE, buyOrder);
+					}
+					if (sellOrder != null) {
+						messagingTemplate.convertAndSend("/topic/market/order-trade/" + symbol + "/" + sellOrder.getMemberId(), sellOrder);
+						nettyHandler.handleOrder(NettyCommand.PUSH_EXCHANGE_ORDER_TRADE, sellOrder);
+					}
+				}
+				if (coinProcessor != null && !trades.isEmpty()) {
+					coinProcessor.process(trades);
+				}
+				if (symbol != null && !trades.isEmpty()) {
+					pushJob.addTrades(symbol, trades);
+				}
+				for (ExchangeOrder order : completedOrders) {
+					messagingTemplate.convertAndSend("/topic/market/order-completed/" + order.getSymbol() + "/" + order.getMemberId(), order);
+					nettyHandler.handleOrder(NettyCommand.PUSH_EXCHANGE_ORDER_COMPLETED, order);
+				}
+			}
+		} catch (Exception e) {
+			log.error("handleMatchResult error", e);
+		}
+	}
+
+	/**
+	 * 处理订单完成（旧路径）。方案 A 下撮合不发此 topic；若与 exchange-match-result 同时有数据，需幂等防重复。
+	 */
 	@KafkaListener(topics = "exchange-order-completed", containerFactory = "kafkaListenerContainerFactory")
 	public void handleOrderCompleted(List<ConsumerRecord<String, String>> records) {
 		logger.info("接收到exchange-order-completed消息");
