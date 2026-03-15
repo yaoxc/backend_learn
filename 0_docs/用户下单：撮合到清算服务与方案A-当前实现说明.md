@@ -138,6 +138,7 @@
 | exchange | CoinTrader | 单交易对撮合引擎；flushMatchResult 调用 MatchResultPublisher.publish。 |
 | exchange | QueueAndWalMatchResultPublisher | 方案 A：队列 + WAL 写 + 按偏移发 Kafka。 |
 | exchange | CoinTraderConfig | 为每个启用交易对创建 CoinTrader 与 QueueAndWalMatchResultPublisher，并 start()。 |
+| exchange | MonitorController.match-queue | GET /monitor/match-queue：各 symbol 的 match 队列 size、capacity，供监控/告警。 |
 | exchange-core | MatchResult | 单条消息体：**messageId**（发送时生成）、symbol, ts, trades, completedOrders。 |
 | exchange-core | ExchangeOrderService.processMatchResult | 单事务：先处理本批 trades，再处理本批 completedOrders（tradeCompleted）。 |
 | exchange-core | ExchangeOrderService.processMatchResultIdempotent | 按 messageId 幂等：已存在则返回 false；否则 insert messageId 后 processMatchResult，同一事务。 |
@@ -147,10 +148,74 @@
 | exchange-core | ExchangeOrderService.addOrder / addOrderForApi | 下单落库，设置 status=TRADING。 |
 | exchange-core | ExchangeOrderService.tradeCompleted | 完全成交时设置 status=COMPLETED 并退冻结。 |
 | 配置项 | match.wal.path | WAL 根目录，默认 data/wal。 |
+| 配置项 | match.queue.capacity | 方案 A 内存队列容量，默认 20000，建议 1 万～10 万。 |
 
 ---
 
-## 六、与典型 CEX 架构的差异
+## 六、监控：撮合队列数据量与容量（方案 A）
+
+为便于发现 Writer/Sender 跟不上或磁盘/Kafka 异常导致的队列积压，对方案 A 的 **match 队列** 暴露可读数据量与容量，供监控与告警使用。
+
+### 6.0 容量与对挂单/撮合的影响
+
+**（1）撮合结果队列（方案 A 的 match 队列，QueueAndWalMatchResultPublisher）**
+
+- **当前容量**：默认 **2 万**（20000）条 MatchResult，**每个交易对一个队列**。可通过配置 **match.queue.capacity** 调整（建议 1 万～10 万）。
+- **会阻止挂单吗？** **不会**。挂单是用户请求 → exchange-api → 写入 Kafka（exchange-order），与撮合结果队列无关。队列满不会阻止新订单进入 Kafka。
+- **会影响撮合速度吗？** **会**。消费 exchange-order 的线程在每次撮合后会调用 `publish(MatchResult)` → `queue.put(result)`。队列满时 **put 会阻塞**，该线程无法继续处理下一笔订单，因此**撮合吞吐会下降甚至暂时停住**，直到 Writer 消费出空位。不会丢数据，但会形成背压。
+
+**（2）限价订单簿队列（buyLimitPriceQueue / sellLimitPriceQueue）**
+
+- **容量**：**无固定容量**，为 `TreeMap<BigDecimal, MergeOrder>`，随挂单增多而增长，仅受 **内存** 限制。
+- **会阻止挂单吗？** 不会因「队列满」而阻止（无容量上限）。但**挂单**（addLimitPriceOrder）与**撮合**（matchLimitPriceWithLPList 等）共用 **synchronized(买/卖限价队列)**，锁竞争时后到的挂单会**等待锁**，表现为挂单延迟。
+- **会影响撮合速度吗？** **会**。同一把锁下，若正在挂单则撮合要等锁，若正在撮合则挂单要等锁，二者会**互相影响吞吐**。订单簿越大、持锁时间越长，竞争越明显。
+
+### 6.1 暴露方式
+
+- **QueueAndWalMatchResultPublisher**（exchange 模块）：
+  - **getMatchQueueSize()**：当前队列中待写 WAL 的 MatchResult 条数（数据量）。
+  - **getMatchQueueCapacity()**：队列容量上限（与配置 match.queue.capacity 一致）。
+- **HTTP 接口**（exchange 模块 MonitorController）：
+  - **GET /monitor/match-queue**：返回各 symbol 的队列监控数据。
+  - 响应示例：`{ "BTC/USDT": { "size": 120, "capacity": 20000 }, "ETH/USDT": { "size": 0, "capacity": 20000 } }`。
+  - 仅当该 symbol 的 publisher 为 QueueAndWalMatchResultPublisher 时才会出现在结果中。
+
+### 6.2 使用建议
+
+- **采集**：监控系统定时拉取 `/monitor/match-queue`，按 symbol 采集 `size`、`capacity`。
+- **告警**：当某 symbol 的 `size / capacity` 超过阈值（如 0.8）时告警，表示队列接近满，撮合可能即将在 `put` 上阻塞；或当 `size` 持续上升时告警，表示 Writer/Sender 可能异常。
+- **大盘**：可将各 symbol 的 size、capacity、使用率（size/capacity）展示在运维大盘。
+
+### 6.3 监控处理方案建议
+
+| 层级 | 建议 | 说明 |
+|------|------|------|
+| **采集** | 拉取现有 HTTP 接口 | 定时（如 10s/30s）请求 **GET /monitor/match-queue**，解析各 symbol 的 size、capacity；无需改业务代码。若已有 **Prometheus**，可加一个 **Exporter** 或 **Spring Boot Actuator + 自定义 Meter**，将 size/capacity 按 symbol 打成 Gauge，由 Prometheus 抓取。 |
+| **存储** | 有时序库用时序库，否则先落库/日志 | 有 Prometheus 则存 Prometheus；有 InfluxDB/其他时序库则可写时序库。若暂无，可先由采集脚本写 DB 或打日志，便于事后查趋势与告警回溯。 |
+| **告警规则** | 使用率 + 持续上升 | **使用率**：某 symbol `size / capacity ≥ 0.8`（可调）告警，表示即将背压。**持续上升**：连续 N 个周期 size 单调增且 > 某阈值，表示 Writer/Sender 可能卡住。告警接收：钉钉/企微/邮件/短信，按现有运维通道。 |
+| **大盘** | 按 symbol 展示 size、capacity、使用率 | 用 Grafana 或内部大盘，按 symbol 展示：当前 size、capacity、使用率（%）；可选最近 1h/6h 趋势。便于一眼看出哪几个 symbol 积压、是否在恶化。 |
+| **排障** | 告警后查 WAL/磁盘/Kafka | 队列高时优先查：本机 WAL 目录是否写满或 IO 慢、Kafka 是否不可用或该 topic 是否堆积、Sender 线程是否异常（日志/线程栈）。 |
+
+**最小可行方案（无 Prometheus 时）**：写一个定时脚本（cron 或 systemd timer），每 30s 请求 `/monitor/match-queue`，若任 symbol 使用率 ≥ 80% 或 size 连续 3 次上升则发告警（钉钉/邮件等）；同时将当次结果 append 到日志或简单表，便于事后看趋势。
+
+### 6.4 出现告警后的处置方案
+
+告警表示某 symbol 的 match 队列积压（使用率过高或持续上升），可能原因：Writer 写 WAL 慢、Sender 发 Kafka 慢或失败、磁盘/Kafka 故障。按以下顺序排查与处置。
+
+| 步骤 | 动作 | 说明 |
+|------|------|------|
+| **1. 确认现场** | 看大盘 / 再拉一次接口 | 确认告警的**机器、symbol**，以及当前 **size、capacity、使用率**。若已恢复可仅记录，持续高再往下。 |
+| **2. 查磁盘与 WAL** | 看 WAL 目录空间与 IO | 看 `match.wal.path`（默认 data/wal）所在盘：**空间是否将满**（df）、**IO 是否打满**（iostat）。若满或极慢：清理无关文件或扩容磁盘、迁 WAL 到更快盘；必要时重启 exchange 使 Writer 从空队列继续写（WAL 已有数据，Sender 会继续发）。 |
+| **3. 查 Kafka** | 看 Broker、topic、Sender 日志 | 看 **Kafka 集群**是否正常、**exchange-match-result** topic 是否堆积或不可写。看 exchange 应用日志中 **Sender 是否大量 "kafka send failed"**。若 Kafka 故障：先恢复 Kafka；恢复后 Sender 会按 offset 继续发，队列会逐渐消化。若 topic 堆积严重：扩容 consumer 或扩容分区，避免下游堵导致本机不重启时 Sender 虽成功但整体仍慢。 |
+| **4. 查 Writer/Sender 线程** | 看线程状态与栈 | 用 jstack 或 APM 看 **match-wal-writer-{symbol}**、**match-kafka-sender-{symbol}** 是否存活、是否卡在 IO 或网络。若卡死：根据栈信息修（如锁、第三方超时）；若线程异常退出：需重启 exchange，重启后 Sender 会从 offset 继续发，未发数据不丢。 |
+| **5. 临时缓解** | 扩容队列容量（可选） | 若短期内无法修好磁盘/Kafka，可**临时调大** `match.queue.capacity`（如 2 万 → 5 万）并重启，延缓队列满导致的撮合背压；治标不治本，同时关注内存。 |
+| **6. 恢复验证** | 再看 size 与趋势 | 处置后持续看 **GET /monitor/match-queue**：对应 symbol 的 **size 应逐步下降**。若 Writer/Sender 正常，队列会消化；若仍不降，回到步骤 2～4 继续查。 |
+
+**注意**：队列满时撮合线程会在 `put` 上阻塞，**不会丢数据**；处置目标是恢复 Writer/Sender 的消费能力，让队列降下来。重启 exchange 前尽量保证 WAL 所在盘可写、Kafka 可用，重启后 Sender 会从未发 offset 继续，无需人工补发。
+
+---
+
+## 七、与典型 CEX 架构的差异
 
 主流 CEX 常采用「撮合 → 清算 → 结算 → 资金」分层：撮合只产出交易流水，推给**清算系统**；清算系统做清算（手续费、分摊、强平等），**结算系统**按清算结果生成资金指令，**资金系统**再执行划转、落账。即：**撮合只推流水，不直接驱动资金变动**。
 

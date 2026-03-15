@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.bizzan.bitrade.Trader.CoinTrader;
 import com.bizzan.bitrade.Trader.CoinTraderFactory;
+import com.bizzan.bitrade.Trader.result.QueueAndWalMatchResultPublisher;
 import com.bizzan.bitrade.config.CoinTraderEvent;
 import com.bizzan.bitrade.entity.*;
 import com.bizzan.bitrade.service.ExchangeCoinService;
@@ -123,6 +124,27 @@ public class MonitorController {
 			symbols.add(key);
 		});
 		return symbols;
+	}
+
+	/**
+	 * 方案 A 撮合结果队列监控：各 symbol 的 match 队列当前数据量及容量。
+	 * 可用于告警（如 size/capacity 超过阈值）或大盘展示。
+	 * key: symbol, value: { "size": 当前条数, "capacity": 容量 }
+	 */
+	@RequestMapping("match-queue")
+	public Map<String, Map<String, Integer>> matchQueue() {
+		Map<String, CoinTrader> traders = factory.getTraderMap();
+		Map<String, Map<String, Integer>> result = new HashMap<>();
+		traders.forEach((symbol, trader) -> {
+			if (trader.getMatchResultPublisher() instanceof QueueAndWalMatchResultPublisher) {
+				QueueAndWalMatchResultPublisher pub = (QueueAndWalMatchResultPublisher) trader.getMatchResultPublisher();
+				Map<String, Integer> stat = new HashMap<>();
+				stat.put("size", pub.getMatchQueueSize());
+				stat.put("capacity", pub.getMatchQueueCapacity());
+				result.put(symbol, stat);
+			}
+		});
+		return result;
 	}
 	
 	@RequestMapping("engines")

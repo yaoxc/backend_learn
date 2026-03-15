@@ -29,7 +29,8 @@ public class QueueAndWalMatchResultPublisher implements MatchResultPublisher {
     /** Kafka topic：单条消息原子（trades + completedOrders） */
     public static final String TOPIC_EXCHANGE_MATCH_RESULT = "exchange-match-result";
 
-    private static final int QUEUE_CAPACITY = 10000;
+    /** 队列默认容量；可配置 match.queue.capacity，建议 1 万～10 万，按单 symbol 峰值与内存权衡，过大则故障时积压多、恢复慢 */
+    private static final int DEFAULT_QUEUE_CAPACITY = 20000;
     private static final int SENDER_RETRY_MAX = 5;
     private static final long SENDER_RETRY_DELAY_MS = 500;
 
@@ -37,6 +38,8 @@ public class QueueAndWalMatchResultPublisher implements MatchResultPublisher {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final String walBasePath;
     private final BlockingQueue<MatchResult> queue;
+    /** 队列容量，用于监控暴露，与 queue 实际容量一致 */
+    private final int queueCapacity;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private Thread writerThread;
     private Thread senderThread;
@@ -46,11 +49,23 @@ public class QueueAndWalMatchResultPublisher implements MatchResultPublisher {
     /** 已发送偏移文件路径 */
     private final Path offsetPath;
 
+    /**
+     * 使用默认队列容量 {@value #DEFAULT_QUEUE_CAPACITY}。
+     */
     public QueueAndWalMatchResultPublisher(String symbol, KafkaTemplate<String, String> kafkaTemplate, String walBasePath) {
+        this(symbol, kafkaTemplate, walBasePath, DEFAULT_QUEUE_CAPACITY);
+    }
+
+    /**
+     * @param queueCapacity 内存队列容量；≤0 时用默认 {@value #DEFAULT_QUEUE_CAPACITY}。建议 1 万～10 万，过大则故障时积压多、内存占用高。
+     */
+    public QueueAndWalMatchResultPublisher(String symbol, KafkaTemplate<String, String> kafkaTemplate, String walBasePath, int queueCapacity) {
         this.symbol = symbol;
         this.kafkaTemplate = kafkaTemplate;
         this.walBasePath = walBasePath == null || walBasePath.isEmpty() ? "data/wal" : walBasePath;
-        this.queue = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
+        int cap = queueCapacity > 0 ? queueCapacity : DEFAULT_QUEUE_CAPACITY;
+        this.queueCapacity = cap;
+        this.queue = new ArrayBlockingQueue<>(cap);
         String safeSymbol = symbol.replace("/", "-");
         this.walPath = Paths.get(this.walBasePath, "match-" + safeSymbol + ".wal");
         this.offsetPath = Paths.get(this.walBasePath, "match-" + safeSymbol + ".offset");
@@ -85,6 +100,20 @@ public class QueueAndWalMatchResultPublisher implements MatchResultPublisher {
             Thread.currentThread().interrupt();
             log.warn("[{}] publish interrupted", symbol, e);
         }
+    }
+
+    /**
+     * 当前队列中待写 WAL 的 MatchResult 数量（供监控）。
+     */
+    public int getMatchQueueSize() {
+        return queue.size();
+    }
+
+    /**
+     * 队列容量上限（供监控）；可与 getMatchQueueSize 一起计算使用率或剩余空间。
+     */
+    public int getMatchQueueCapacity() {
+        return queueCapacity;
     }
 
     /**

@@ -54,9 +54,9 @@ public class CoinTrader {
     private SimpleDateFormat dateTimeFormat;
 
     // ===================== 订单簿（价格优先 + 时间优先） =====================
-    /** 买限价队列：价格从高到低 */
+    /** 买限价队列：价格从高到低。无固定容量，受内存限制；挂单与撮合共用 synchronized(本队列)，锁竞争会影响挂单与撮合吞吐。 */
     private TreeMap<BigDecimal, MergeOrder> buyLimitPriceQueue;
-    /** 卖限价队列：价格从低到高 */
+    /** 卖限价队列：价格从低到高。无固定容量，受内存限制；挂单与撮合共用 synchronized(本队列)，锁竞争会影响挂单与撮合吞吐。 */
     private TreeMap<BigDecimal, MergeOrder> sellLimitPriceQueue;
     /** 买市价队列、卖市价队列：FIFO */
     private LinkedList<ExchangeOrder> buyMarketQueue;
@@ -863,6 +863,10 @@ public class CoinTrader {
     /** 【改造范围】注入方案 A 的 MatchResultPublisher 后，撮合结果经队列+WAL 由后台线程发 Kafka，热路径不阻塞 */
     public void setMatchResultPublisher(MatchResultPublisher matchResultPublisher) {
         this.matchResultPublisher = matchResultPublisher;
+    }
+
+    public MatchResultPublisher getMatchResultPublisher() {
+        return matchResultPublisher;
     }
     public int getLimitPriceOrderCount(ExchangeOrderDirection direction){
         int count = 0;
