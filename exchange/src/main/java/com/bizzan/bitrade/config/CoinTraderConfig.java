@@ -12,6 +12,7 @@ import com.bizzan.bitrade.entity.ExchangeCoin;
 import com.bizzan.bitrade.service.ExchangeCoinService;
 import com.bizzan.bitrade.service.ExchangeOrderService;
 import com.bizzan.bitrade.Trader.result.MatchResultPublisher;
+import com.bizzan.bitrade.Trader.result.OrderEventLogger;
 import com.bizzan.bitrade.Trader.result.QueueAndWalMatchResultPublisher;
 
 import java.util.List;
@@ -48,6 +49,10 @@ public class CoinTraderConfig {
             MatchResultPublisher publisher = new QueueAndWalMatchResultPublisher(coin.getSymbol(), kafkaTemplate, matchWalPath, matchQueueCapacity);
             ((QueueAndWalMatchResultPublisher) publisher).start();
             trader.setMatchResultPublisher(publisher);
+
+            // 形态一：订单事件日志，用于重启时回放恢复订单簿
+            OrderEventLogger orderEventLogger = new OrderEventLogger(coin.getSymbol(), matchWalPath);
+            trader.setOrderEventLogger(orderEventLogger);
 
             factory.addTrader(coin.getSymbol(),trader);
         }

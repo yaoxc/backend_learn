@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.bizzan.bitrade.entity.*;
 import com.bizzan.bitrade.Trader.result.MatchResult;
 import com.bizzan.bitrade.Trader.result.MatchResultPublisher;
+import com.bizzan.bitrade.Trader.result.OrderEventLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -70,6 +71,10 @@ public class CoinTrader {
 
     /** 方案 A：注入后撮合结果经队列+WAL 异步发送；未注入则同步发 exchange-trade / exchange-order-completed */
     private MatchResultPublisher matchResultPublisher;
+    /** 形态一：订单事件日志，用于重启时回放恢复订单簿，避免从 DB 加载导致重复撮合 */
+    private OrderEventLogger orderEventLogger;
+    /** 回放模式：为 true 时不写订单日志、不发布撮合结果，仅用于 replayOrderLog() 恢复订单簿 */
+    private volatile boolean replayMode = false;
 
     // ===================== 构造与初始化 =====================
 
@@ -167,6 +172,10 @@ public class CoinTrader {
         if(!symbol.equalsIgnoreCase(exchangeOrder.getSymbol())){
             logger.info("unsupported symbol,coin={},base={}", exchangeOrder.getCoinSymbol(), exchangeOrder.getBaseSymbol());
             return ;
+        }
+        // 2.5 形态一：非回放模式下将订单接入事件写入订单日志，供重启时回放恢复订单簿
+        if (!replayMode && orderEventLogger != null) {
+            orderEventLogger.appendOrder(exchangeOrder);
         }
         // 3. 无剩余可成交量则直接返回，避免无效遍历（已撤/已完成订单不应再参与撮合）
         if(exchangeOrder.getAmount().compareTo(BigDecimal.ZERO) <=0 || exchangeOrder.getAmount().subtract(exchangeOrder.getTradedAmount()).compareTo(BigDecimal.ZERO)<=0){
@@ -627,6 +636,9 @@ public class CoinTrader {
      * 否则同步发 exchange-trade + exchange-order-completed。
      */
     private void flushMatchResult(List<ExchangeTrade> trades, List<ExchangeOrder> completedOrders) {
+        if (replayMode) {
+            return;
+        }
         if (matchResultPublisher != null) {
             // 生成全局 messageId，供消费端幂等：同一 messageId 只落库一次
             String messageId = UUID.randomUUID().toString();
@@ -726,6 +738,9 @@ public class CoinTrader {
                     if (order.getOrderId().equalsIgnoreCase(exchangeOrder.getOrderId())) {
                         orderIterator.remove();
                         onRemoveOrder(order);
+                        if (!replayMode && orderEventLogger != null) {
+                            orderEventLogger.appendCancel(exchangeOrder);
+                        }
                         return order;
                     }
                 }
@@ -744,6 +759,9 @@ public class CoinTrader {
                                 list.remove(exchangeOrder.getPrice());
                             }
                             onRemoveOrder(order);
+                            if (!replayMode && orderEventLogger != null) {
+                                orderEventLogger.appendCancel(exchangeOrder);
+                            }
                             return order;
                         }
                     }
@@ -868,6 +886,44 @@ public class CoinTrader {
     public MatchResultPublisher getMatchResultPublisher() {
         return matchResultPublisher;
     }
+
+    public void setOrderEventLogger(OrderEventLogger orderEventLogger) {
+        this.orderEventLogger = orderEventLogger;
+    }
+
+    public void setReplayMode(boolean replayMode) {
+        this.replayMode = replayMode;
+    }
+
+    public boolean isReplayMode() {
+        return replayMode;
+    }
+
+    /**
+     * 形态一：从订单事件日志回放恢复订单簿，避免从 DB 加载 TRADING 导致已撮合未下发的订单再次撮合。
+     * 回放期间不写订单日志、不发布撮合结果；回放完成后恢复正常模式。
+     */
+    public void replayOrderLog() {
+        if (orderEventLogger == null) {
+            return;
+        }
+        setReplayMode(true);
+        try {
+            orderEventLogger.replay(
+                    order -> {
+                        try {
+                            trade(order);
+                        } catch (ParseException e) {
+                            logger.warn("[{}] replay trade parse error, orderId={}", symbol, order != null ? order.getOrderId() : null, e);
+                        }
+                    },
+                    this::cancelOrder
+            );
+        } finally {
+            setReplayMode(false);
+        }
+    }
+
     public int getLimitPriceOrderCount(ExchangeOrderDirection direction){
         int count = 0;
         TreeMap<BigDecimal,MergeOrder> queue = direction == ExchangeOrderDirection.BUY ? buyLimitPriceQueue : sellLimitPriceQueue;

@@ -43,6 +43,8 @@ public class OrderController {
     private CoinService coinService;
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
+    @Autowired
+    private OrderOutboxService orderOutboxService;
     @Value("${exchange.relay.order.ingress-topic:exchange-order-ingress}")
     private String orderIngressTopic;
     @Value("${exchange.relay.order.cancel-ingress-topic:exchange-order-cancel-ingress}")
@@ -281,13 +283,15 @@ public class OrderController {
         //限价买入单时amount为用户设置的总成交额
         order.setAmount(amount);
 
-        MessageResult mr = orderService.addOrder(member.getId(), order);
+        MessageResult mr = orderOutboxService.addOrderAndSaveOutbox(member.getId(), order, orderIngressTopic);
         if (mr.getCode() != 0) {
             return MessageResult.error(500, "提交订单失败:" + mr.getMessage());
         }
         log.info(">>>>>>>>>>订单提交完成>>>>>>>>>>");
-        // 发送消息至“数据中转服务入口”Topic（由中转服务转发至撮合内部Topic）
-        kafkaTemplate.send(orderIngressTopic, JSON.toJSONString(order));
+        // 本地消息表：立即尝试发送，失败由 RetryOrderOutboxJob 重试
+        if (mr.getData() != null && mr.getData() instanceof Long) {
+            orderOutboxService.trySendById((Long) mr.getData());
+        }
         MessageResult result = MessageResult.success("success");
         result.setData(order.getOrderId());
         return result;
@@ -523,13 +527,14 @@ public class OrderController {
         //限价买入单时amount为用户设置的总成交额
         order.setAmount(amount);
 
-        MessageResult mr = orderService.addOrder(uid, order);
+        MessageResult mr = orderOutboxService.addOrderAndSaveOutbox(uid, order, orderIngressTopic);
         if (mr.getCode() != 0) {
             return MessageResult.error(500, "提交订单失败:" + mr.getMessage());
         }
         log.info(">>>>>>>>>>订单提交完成>>>>>>>>>>");
-        // 发送消息至“数据中转服务入口”Topic（由中转服务转发至撮合内部Topic）
-        kafkaTemplate.send(orderIngressTopic, JSON.toJSONString(order));
+        if (mr.getData() != null && mr.getData() instanceof Long) {
+            orderOutboxService.trySendById((Long) mr.getData());
+        }
         MessageResult result = MessageResult.success("success");
         result.setData(order.getOrderId());
         return result;
@@ -705,8 +710,8 @@ public class OrderController {
 			}
         }
         if(isExchangeOrderExist(order)){
-            // 发送撤单消息至“数据中转服务入口”Topic（由中转服务转发至撮合内部Topic）
-            kafkaTemplate.send(cancelIngressTopic,JSON.toJSONString(order));
+            Long outboxId = orderOutboxService.saveCancelOutbox(cancelIngressTopic, order.getOrderId(), JSON.toJSONString(order));
+            orderOutboxService.trySendById(outboxId);
         }
         else{
             //强制取消
@@ -762,8 +767,8 @@ public class OrderController {
             if (maxCancelTimes > 0 && orderService.findTodayOrderCancelTimes(member.getId(), order.getSymbol()) >= maxCancelTimes) {
                 return MessageResult.error(500, "你今天已经取消了 " + maxCancelTimes + " 次");
             }
-            // 发送撤单消息至“数据中转服务入口”Topic（由中转服务转发至撮合内部Topic）
-            kafkaTemplate.send(cancelIngressTopic,JSON.toJSONString(order));
+            Long outboxId = orderOutboxService.saveCancelOutbox(cancelIngressTopic, order.getOrderId(), JSON.toJSONString(order));
+            orderOutboxService.trySendById(outboxId);
         }
         else{
             //强制取消

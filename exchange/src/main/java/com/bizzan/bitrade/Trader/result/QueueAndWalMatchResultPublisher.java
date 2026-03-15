@@ -167,6 +167,7 @@ public class QueueAndWalMatchResultPublisher implements MatchResultPublisher {
 
     /**
      * Sender 线程：从 WAL 按偏移读取，逐行发 Kafka，成功后更新偏移文件。
+     * 重启后从 offset 继续，不会「重新撮合」或「重复写 WAL」；同一 WAL 行若宕机发生在写 offset 之前，可能被再次发送到 Kafka（下游按 messageId 幂等）。
      */
     private void runSender() {
         long offset = readOffset();

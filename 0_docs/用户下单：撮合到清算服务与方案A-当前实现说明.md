@@ -73,6 +73,68 @@
 - **进程宕机**：重启后 Sender 从 offset 文件读取上次已发位置，从 WAL 该位置继续读行发送，避免已落盘未发 Kafka 的数据丢失。
 - **无成交且无完成订单**：`publish` 时直接不入队，不写 WAL。
 
+### 2.6 常见疑问：会重复撮合或重复写入 WAL 吗？
+
+**WAL/Sender 侧**：不会「同一批结果多次写入 WAL」；同一条 WAL 行可能被发到 Kafka 两次（宕机发生在写 offset 前），下游用 messageId 幂等即可。
+
+**订单簿恢复侧（重要）**：**会存在「已撮合但未发到 Kafka 的订单被重新加载进订单簿并再次撮合」的风险**，原因如下。
+
+- 重启时 **CoinTraderEvent**（ContextRefreshedEvent）会按交易对执行：
+  - 从 DB 查 **findAllTradingOrderBySymbol(symbol)**，即所有状态为 **TRADING** 的订单；
+  - 用 **exchange_order_detail** 回放每笔订单的 tradedAmount、turnover；
+  - 将「未完成」的订单放入 `tradingOrders`，再调用 **trader.trade(tradingOrders)**，把这些订单重新送入撮合引擎（挂单或立即撮合）。
+- 若某批订单已经在本进程内撮合过，且对应的 MatchResult 还在**队列中未写 WAL**，或**已写 WAL 但尚未发到 Kafka**（或 market 尚未消费），则：
+  - DB 里这些订单**仍为 TRADING**（market 未收到 match-result，无法更新为 COMPLETED）；
+  - 已发生的那部分成交可能也**尚未写入 exchange_order_detail**（同样依赖 market 消费 match-result）；
+  - 重启后这些订单会被当作「交易中、未完成」再次加载，**重新进入订单簿**，可能与其他订单**再次撮合**，导致同一笔订单被撮合两次、产生重复成交与资金风险。
+
+因此：
+
+| 维度 | 说明 |
+|------|------|
+| **WAL 只写一次** | 每条 MatchResult 只入队一次、Writer 只写 WAL 一次；不会出现「同一批结果多次写入 WAL」。 |
+| **同一条 WAL 可能发 Kafka 两次** | 宕机发生在 Sender 写 offset 之前时，重启后同一 WAL 行会再发一次；下游 messageId 幂等可去重。 |
+| **订单簿从 DB 恢复** | 当 **match.restore.from.order.log=true**（默认）时，已采用**形态一**：从订单事件日志回放恢复订单簿，**不再从 DB 加载**，故无重复撮合风险。设为 false 时仍从 DB 加载，存在上述风险。 |
+
+**形态一已实现（订单日志 + 撮合结果日志分离）**：  
+- 订单事件写入 **order-{symbol}.log**（ORDER/CANCEL 每行一条）；重启时 **CoinTraderEvent** 调用 **trader.replayOrderLog()**，按序回放订单与撤单，在**回放模式**下不写订单日志、不发布撮合结果，仅恢复订单簿。  
+- 配置 **match.restore.from.order.log**：**true**（默认）= 从订单日志回放恢复；**false** = 回退为从 DB 加载 TRADING 订单恢复（存在重复撮合风险）。详见下节 2.7。
+
+**其他缓解思路（当 match.restore.from.order.log=false 时）**：  
+- 方案一：启动时**不**用 DB 的 TRADING 订单恢复订单簿，仅依赖后续 Kafka `exchange-order` 新订单；可避免重复撮合，但**未完成挂单会丢失**（需业务评估）。  
+- 方案二：启动时先让 **Sender 把 WAL 发完**（或至少发到当前 offset），再执行「从 DB 加载 TRADING 订单并 trade」；可减少「已进 WAL 未发」的订单被重载，但**仍在队列未写 WAL** 的批次仍可能对应 DB 中 TRADING 订单被重载后再次撮合。  
+- 方案三：恢复订单簿前，用 WAL 中未发送的 MatchResult（或未推进 offset 的区间）解析出「逻辑上已成交的 orderId」，加载 DB 订单时排除或修正这些订单的剩余量，再进撮合；实现复杂，需与 WAL 格式、offset 管理一致。  
+- **方案四：重启时清空 WAL 到 offset（丢弃未发送部分）**  
+  重启前或启动时把 WAL 截断到当前 offset（即只保留「已发送」部分，或直接清空整份 WAL 与 offset），相当于**已撮合但没写入 WAL / 没发到 Kafka 的当作没撮合过**；然后仍从 DB 加载 TRADING 恢复订单簿。这样**不会**出现「同一条 MatchResult 发两次」，但：  
+  - 未发送的撮合结果被**丢弃**（在 WAL 未发的那段、以及在队列里根本没写进 WAL 的，都相当于没了）；  
+  - 这些订单在 DB 仍为 TRADING，会被重新加载进订单簿并**可能再次撮合**，产生**新的** MatchResult 再发 Kafka。  
+  **风险**：再次撮合的结果**不一定**与丢弃的那次一致（对手盘、价格、数量可能不同），可能产生错误成交或资金不一致；且队列中未写 WAL 的撮合结果直接丢失、无补偿。因此只能算「宁可丢、也不要重复发」的取舍，**不能**作为安全、一致性的通用方案；**形态一（订单日志回放）** 才是从根源上既不丢、又不重复撮合的做法。  
+- **业界主流**：订单簿**不从 DB 恢复**，而从**撮合侧订单事件日志**（或与撮合结果同序的统一事件日志）回放恢复，使「已撮合未下发」的订单在日志中已体现为已成交/已移除，从根源上避免重复撮合。详见 **《撮合结果可靠投递方案-业界主流》第八节**。
+
+当 **match.restore.from.order.log=false** 时，仍存在「已撮合未下发、重启后再次撮合」的边界情况，可通过监控与运维降低概率，或改为 true 启用形态一。
+
+### 2.7 形态一：订单日志与恢复配置（已实现）
+
+采用「订单日志 + 撮合结果日志分离」：订单簿恢复**只依赖订单事件日志**，不从 DB 加载 TRADING 订单，从根源上避免重复撮合。
+
+**改动量概览**：新增 1 个类（OrderEventLogger）、修改 3 处（CoinTrader 注入与 replay 模式、CoinTraderConfig 创建并注入、CoinTraderEvent 按配置选择回放或 DB 恢复）；无新增依赖；配置项 1 个，默认 true 即启用形态一。
+
+| 组件 | 说明 |
+|------|------|
+| **OrderEventLogger** | 每个交易对一个实例，与 QueueAndWalMatchResultPublisher 同目录（match.wal.path）。 |
+| **订单日志文件** | `{match.wal.path}/order-{symbol}.log`，每行一条事件：`ORDER\t{ExchangeOrder JSON}` 或 `CANCEL\t{ExchangeOrder JSON}`。 |
+| **写入时机** | 正常模式下：`trade(order)` 入口处追加 ORDER；`cancelOrder(order)` 成功撤单后追加 CANCEL。回放模式下不写。 |
+| **回放** | **CoinTrader.replayOrderLog()**：设置 replay 模式 → 按序读订单日志，ORDER 调用 trade(order)、CANCEL 调用 cancelOrder(order) → 恢复订单簿；回放期间不写订单日志、不发布撮合结果。 |
+| **启动流程** | **CoinTraderEvent** 若 **match.restore.from.order.log=true**（默认）：对每个 trader 调用 **trader.replayOrderLog()** 后 setReady(true)；否则从 DB 加载 TRADING 订单并 trade(tradingOrders)（旧逻辑）。 |
+
+**配置项**：
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| **match.restore.from.order.log** | **true** | true = 从订单事件日志回放恢复订单簿（推荐，无重复撮合风险）；false = 从 DB 加载 TRADING 订单恢复（兼容旧逻辑，存在重复撮合风险）。 |
+
+**首次启动或订单日志不存在**：replayOrderLog() 发现无文件则直接返回，订单簿为空，仅接受后续 Kafka 新订单，行为正确。
+
 ---
 
 ## 三、幂等
