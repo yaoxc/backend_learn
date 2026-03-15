@@ -27,7 +27,6 @@ import com.bizzan.bitrade.handler.NettyHandler;
 import com.bizzan.bitrade.job.ExchangePushJob;
 import com.bizzan.bitrade.processor.CoinProcessor;
 import com.bizzan.bitrade.processor.CoinProcessorFactory;
-import com.bizzan.bitrade.service.ClearingService;
 import com.bizzan.bitrade.service.ExchangeOrderService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -60,12 +59,13 @@ public class ExchangeTradeConsumer {
 	private NettyHandler nettyHandler;
 	@Value("${second.referrer.award}")
 	private boolean secondReferrerAward;
+	/** true=走清算→结算→资金流水线（仅落订单状态，资金由资金服务执行）；false=沿用原逻辑（直接改钱包） */
+	@Value("${match.result.use.fund.pipeline:true}")
+	private boolean useFundPipeline;
 	private ExecutorService executor = new ThreadPoolExecutor(30, 100, 0L, TimeUnit.MILLISECONDS,
 			new LinkedBlockingQueue<Runnable>(1024), new ThreadPoolExecutor.AbortPolicy());
 	@Autowired
 	private ExchangePushJob pushJob;
-	@Autowired
-	private ClearingService clearingService;
 
 	/**
 	 * 处理成交明细（旧路径）。方案 A 下撮合不发此 topic；若与 exchange-match-result 同时有数据，需幂等防重复。
@@ -81,47 +81,54 @@ public class ExchangeTradeConsumer {
 	}
 
 	/**
-	 * 【改造范围】方案 A：消费单条消息原子的 exchange-match-result（trades + completedOrders 一条）。
-	 * 单事务处理，避免部分成功；并推送行情、订单成交/完成通知。
+	 * 消费方案 A 下撮合引擎统一出口 exchange-match-result（单条消息 = 一批 trades + 一批 completedOrders）。
+	 * <p>
+	 * market 职责：只做行情与盘口 + 订单状态与成交明细 + 推送，不碰资金。资金由 清算→结算→资金服务 执行。
+	 * <ul>
+	 *   <li>订单域：落 exchange_order_detail、order_detail_aggregation，更新 exchange_order 状态（COMPLETED 等）；不写 member_wallet、不退冻结（useFundPipeline=true 时）。</li>
+	 *   <li>行情与盘口：K 线、24h、盘口、最新成交（CoinProcessor、pushJob）。</li>
+	 *   <li>推送：WebSocket / Netty 推送订单部分成交、订单完成。</li>
+	 *   <li>清算由独立消费者 ClearingMatchResultConsumer 监听 exchange-match-result 完成，此处不再触发。</li>
+	 * </ul>
 	 */
 	@KafkaListener(topics = "exchange-match-result", containerFactory = "kafkaListenerContainerFactory")
 	public void handleMatchResult(List<ConsumerRecord<String, String>> records) {
 		try {
 			for (ConsumerRecord<String, String> record : records) {
-				// 解析单条 Kafka 消息为 JSON，便于按字段取值
-				// MatchResult 结构：{ "messageId": "1234567890", "symbol": "BTC/USDT", "ts": 1699999999999, "trades": [...], "completedOrders": [...]}
+				// 1. 解析 MatchResult：messageId, symbol, ts, trades[], completedOrders[]
 				JSONObject obj = JSON.parseObject(record.value());
-				// 取出本批成交明细、已完全成交订单两个数组（MatchResult 结构）
 				JSONArray tradesArr = obj.getJSONArray("trades");
 				JSONArray completedArr = obj.getJSONArray("completedOrders");
-				// 反序列化为 ExchangeTrade / ExchangeOrder 列表，空则用空列表避免 NPE
 				List<ExchangeTrade> trades = tradesArr != null ? JSON.parseArray(tradesArr.toJSONString(), ExchangeTrade.class) : java.util.Collections.emptyList();
 				List<ExchangeOrder> completedOrders = completedArr != null ? JSON.parseArray(completedArr.toJSONString(), ExchangeOrder.class) : java.util.Collections.emptyList();
-				// 无成交且无完成订单则跳过，避免无意义落库与推送
 				if (trades.isEmpty() && completedOrders.isEmpty()) {
 					continue;
 				}
-				// 幂等：有 messageId 时按 messageId 只落库一次，重复消费跳过；无 messageId 时直接落库（兼容旧消息）
+
+				// 2. 幂等落库（订单状态 + 成交明细）。true=仅订单不碰资金，false=原逻辑含钱包/流水/返佣/退冻结
 				String messageId = obj.getString("messageId");
 				boolean processed;
 				try {
-					processed = exchangeOrderService.processMatchResultIdempotent(messageId, trades, completedOrders, secondReferrerAward);
+					if (useFundPipeline) {
+						processed = exchangeOrderService.processMatchResultIdempotentOrderOnly(messageId, trades, completedOrders);
+					} else {
+						processed = exchangeOrderService.processMatchResultIdempotent(messageId, trades, completedOrders, secondReferrerAward);
+					}
 				} catch (Exception ex) {
-					log.error("handleMatchResult processMatchResultIdempotent error", ex);
+					log.error("handleMatchResult processMatchResult error", ex);
 					throw ex;
 				}
 				if (!processed) {
-					// 已处理过（重复消费），跳过后续推送
-					continue;
+					continue; // 已处理过（重复消费），不再推送与清算
 				}
-				// 取交易对，用于后续推送与行情；若消息未带则从第一笔成交里取
+
+				// 3. 取交易对 symbol（推送与行情用）
 				String symbol = obj.getString("symbol");
 				if (symbol == null && !trades.isEmpty()) {
 					symbol = trades.get(0).getSymbol();
 				}
-				// 按交易对取行情处理器，用于更新 K 线等
-				CoinProcessor coinProcessor = symbol != null ? coinProcessorFactory.getProcessor(symbol) : null;
-				// 逐笔成交推送给买卖双方：WebSocket 主题 + Netty，便于前端/客户端实时展示部分成交
+
+				// 4. 推送：订单部分成交（逐笔推给买卖双方）
 				for (ExchangeTrade trade : trades) {
 					ExchangeOrder buyOrder = exchangeOrderService.findOne(trade.getBuyOrderId());
 					ExchangeOrder sellOrder = exchangeOrderService.findOne(trade.getSellOrderId());
@@ -134,22 +141,21 @@ public class ExchangeTradeConsumer {
 						nettyHandler.handleOrder(NettyCommand.PUSH_EXCHANGE_ORDER_TRADE, sellOrder);
 					}
 				}
-				// 更新 K 线等行情数据
+
+				// 5. 行情与盘口：更新 K 线、CoinThumb，加入盘口/最新成交推送队列
+				CoinProcessor coinProcessor = symbol != null ? coinProcessorFactory.getProcessor(symbol) : null;
 				if (coinProcessor != null && !trades.isEmpty()) {
 					coinProcessor.process(trades);
 				}
-				// 将本批成交加入推送队列，供行情/盘口等对外推送
 				if (symbol != null && !trades.isEmpty()) {
 					pushJob.addTrades(symbol, trades);
 				}
-				// 已完全成交订单推送给对应用户：WebSocket + Netty，通知订单已结束
+
+				// 6. 推送：订单完全成交（通知买卖双方订单已结束）
 				for (ExchangeOrder order : completedOrders) {
 					messagingTemplate.convertAndSend("/topic/market/order-completed/" + order.getSymbol() + "/" + order.getMemberId(), order);
 					nettyHandler.handleOrder(NettyCommand.PUSH_EXCHANGE_ORDER_COMPLETED, order);
 				}
-				// 清算：计算并落库、发 Kafka（幂等按 messageId；发送失败由定时任务重试）
-				Long ts = obj.getLong("ts");
-				clearingService.processAndPublish(messageId, symbol, ts, trades, completedOrders);
 			}
 		} catch (Exception e) {
 			log.error("handleMatchResult error", e);

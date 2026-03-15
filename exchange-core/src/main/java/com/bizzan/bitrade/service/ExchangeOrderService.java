@@ -359,6 +359,126 @@ public class ExchangeOrderService extends BaseService {
     }
 
     /**
+     * 【清算→结算→资金流水线】仅落订单明细与订单状态，不写钱包、不写资金流水、不返佣。
+     * 钱包与流水由资金服务消费 exchange-fund-instruction 后统一执行。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean processMatchResultIdempotentOrderOnly(String messageId, List<ExchangeTrade> trades, List<ExchangeOrder> completedOrders) throws Exception {
+        if (messageId == null || messageId.isEmpty()) {
+            processMatchResultOrderOnly(trades, completedOrders);
+            return true;
+        }
+        if (processedMatchResultMessageRepository.existsByMessageId(messageId)) {
+            return false;
+        }
+        ProcessedMatchResultMessage processed = new ProcessedMatchResultMessage();
+        processed.setMessageId(messageId);
+        processedMatchResultMessageRepository.save(processed);
+        processMatchResultOrderOnly(trades, completedOrders);
+        return true;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public MessageResult processMatchResultOrderOnly(List<ExchangeTrade> trades, List<ExchangeOrder> completedOrders) throws Exception {
+        if (trades != null) {
+            for (ExchangeTrade trade : trades) {
+                processExchangeTradeOrderOnly(trade);
+            }
+        }
+        if (completedOrders != null) {
+            for (ExchangeOrder order : completedOrders) {
+                tradeCompletedOrderOnly(order.getOrderId(), order.getTradedAmount(), order.getTurnover());
+            }
+        }
+        return MessageResult.success("processMatchResultOrderOnly success");
+    }
+
+    public void processExchangeTradeOrderOnly(ExchangeTrade trade) throws Exception {
+        if (trade == null || trade.getBuyOrderId() == null || trade.getSellOrderId() == null) {
+            return;
+        }
+        ExchangeOrder buyOrder = exchangeOrderRepository.findByOrderId(trade.getBuyOrderId());
+        ExchangeOrder sellOrder = exchangeOrderRepository.findByOrderId(trade.getSellOrderId());
+        if (buyOrder == null || sellOrder == null) {
+            log.error("order not found");
+            return;
+        }
+        ExchangeCoin coin = exchangeCoinService.findBySymbol(buyOrder.getSymbol());
+        if (coin == null) {
+            log.error("invalid trade symbol {}", buyOrder.getSymbol());
+            return;
+        }
+        processOrderOrderOnly(buyOrder, trade, coin);
+        processOrderOrderOnly(sellOrder, trade, coin);
+    }
+
+    /**
+     * 仅落成交明细与聚合，不写钱包、不写 member_transaction、不返佣。
+     */
+    public void processOrderOrderOnly(ExchangeOrder order, ExchangeTrade trade, ExchangeCoin coin) {
+        try {
+            Long time = Calendar.getInstance().getTimeInMillis();
+            ExchangeOrderDetail orderDetail = new ExchangeOrderDetail();
+            orderDetail.setOrderId(order.getOrderId());
+            orderDetail.setTime(time);
+            orderDetail.setPrice(trade.getPrice());
+            orderDetail.setAmount(trade.getAmount());
+            BigDecimal turnover = order.getDirection() == ExchangeOrderDirection.BUY ? trade.getBuyTurnover() : trade.getSellTurnover();
+            orderDetail.setTurnover(turnover);
+            BigDecimal fee;
+            if (order.getDirection() == ExchangeOrderDirection.BUY) {
+                fee = trade.getAmount().multiply(coin.getFee());
+            } else {
+                fee = turnover.multiply(coin.getFee());
+            }
+            if (order.getMemberId() != null && (order.getMemberId() == 1L || order.getMemberId() == 10001L)) {
+                fee = BigDecimal.ZERO;
+            }
+            orderDetail.setFee(fee);
+            exchangeOrderDetailRepository.save(orderDetail);
+
+            OrderDetailAggregation aggregation = new OrderDetailAggregation();
+            aggregation.setType(OrderTypeEnum.EXCHANGE);
+            aggregation.setAmount(order.getAmount().doubleValue());
+            aggregation.setFee(orderDetail.getFee().doubleValue());
+            aggregation.setTime(orderDetail.getTime());
+            aggregation.setDirection(order.getDirection());
+            aggregation.setOrderId(order.getOrderId());
+            if (order.getDirection() == ExchangeOrderDirection.BUY) {
+                aggregation.setUnit(order.getBaseSymbol());
+            } else {
+                aggregation.setUnit(order.getCoinSymbol());
+            }
+            Member member = memberService.findOne(order.getMemberId());
+            if (member != null) {
+                aggregation.setMemberId(member.getId());
+                aggregation.setUsername(member.getUsername());
+                aggregation.setRealName(member.getRealName());
+            }
+            orderDetailAggregationRepository.save(aggregation);
+        } catch (Exception e) {
+            log.info(">>>>>processOrderOrderOnly error>>>>>>>>>{}", e);
+        }
+    }
+
+    /**
+     * 仅更新订单状态与成交额，不退冻结；退冻结由资金服务执行 REFUND 指令完成。
+     */
+    @Transactional
+    public MessageResult tradeCompletedOrderOnly(String orderId, BigDecimal tradedAmount, BigDecimal turnover) {
+        ExchangeOrder order = exchangeOrderRepository.findByOrderId(orderId);
+        if (order == null || order.getStatus() != ExchangeOrderStatus.TRADING) {
+            return MessageResult.error(500, "invalid order(" + orderId + "),not trading status");
+        }
+        order.setTradedAmount(tradedAmount);
+        order.setTurnover(turnover);
+        order.setStatus(ExchangeOrderStatus.COMPLETED);
+        order.setCompletedTime(Calendar.getInstance().getTimeInMillis());
+        exchangeOrderRepository.saveAndFlush(order);
+        return MessageResult.success("tradeCompletedOrderOnly success");
+    }
+
+    /**
      * 对发生交易的委托处理相应的钱包
      *
      * @param order               委托订单
