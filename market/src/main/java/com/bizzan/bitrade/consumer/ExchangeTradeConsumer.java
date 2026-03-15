@@ -88,7 +88,7 @@ public class ExchangeTradeConsumer {
 	 *   <li>订单域：落 exchange_order_detail、order_detail_aggregation，更新 exchange_order 状态（COMPLETED 等）；不写 member_wallet、不退冻结（useFundPipeline=true 时）。</li>
 	 *   <li>行情与盘口：K 线、24h、盘口、最新成交（CoinProcessor、pushJob）。</li>
 	 *   <li>推送：WebSocket / Netty 推送订单部分成交、订单完成。</li>
-	 *   <li>清算由独立消费者 ClearingMatchResultConsumer 监听 exchange-match-result 完成，此处不再触发。</li>
+	 *   <li>清算由独立 clearing 服务监听 exchange-match-result 完成，此处不再触发。</li>
 	 * </ul>
 	 */
 	@KafkaListener(topics = "exchange-match-result", containerFactory = "kafkaListenerContainerFactory")

@@ -11,14 +11,15 @@
 ```
 订单入口(Kafka: exchange-order) → ExchangeOrderConsumer → CoinTrader.trade(订单)
     → 内存订单簿撮合 → flushMatchResult（生成 messageId）→ [方案A] MatchResultPublisher.publish
-    → Kafka(exchange-match-result) → Market: ExchangeTradeConsumer.handleMatchResult
-    → processMatchResultIdempotent(messageId, …) → 按 messageId 幂等落库 + 推送
+    → Kafka(exchange-match-result) → Market: ExchangeTradeConsumer（落库+推送）
+                                    → Clearing 服务: 清算落库 + exchange-clearing-result
 ```
 
 - **exchange 模块**：消费 `exchange-order`，按 symbol 取对应 `CoinTrader`，调用 `trader.trade(order)`。
 - **CoinTrader**：单交易对、内存订单簿；撮合结果通过 `flushMatchResult` 统一出口；**每条 MatchResult 生成全局 messageId（UUID）**，供消费端幂等。
 - **方案 A 下**：`flushMatchResult` 只调用 `matchResultPublisher.publish(MatchResult)`，不发 `exchange-trade` / `exchange-order-completed`。
 - **market 模块**：消费 `exchange-match-result`，解析出 messageId、trades、completedOrders；调用 **processMatchResultIdempotent**，同一 messageId 只落库一次，重复消费跳过；再推送行情与订单通知。
+- **clearing 模块（独立应用）**：同样消费 `exchange-match-result`（consumer group=market-clearing-group），计算清算结果落库并发送 `exchange-clearing-result`，供结算/资金服务消费；与 market 解耦部署。
 
 ### 1.2 CoinTrader 撮合入口与分支（当前实现）
 
