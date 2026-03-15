@@ -1,6 +1,6 @@
 # 撮合流程与方案 A 当前实现说明
 
-本文档仅描述当前业务实现：撮合流程、防 Kafka 失败（方案 A）、幂等，不做扩展设计。
+本文档仅描述当前业务实现：撮合流程、防 Kafka 失败（方案 A）、幂等（含 messageId 改造），不做扩展设计。
 
 ---
 
@@ -10,15 +10,15 @@
 
 ```
 订单入口(Kafka: exchange-order) → ExchangeOrderConsumer → CoinTrader.trade(订单)
-    → 内存订单簿撮合 → flushMatchResult → [方案A] MatchResultPublisher.publish
+    → 内存订单簿撮合 → flushMatchResult（生成 messageId）→ [方案A] MatchResultPublisher.publish
     → Kafka(exchange-match-result) → Market: ExchangeTradeConsumer.handleMatchResult
-    → ExchangeOrderService.processMatchResult → 落库(成交明细+订单完成)+推送
+    → processMatchResultIdempotent(messageId, …) → 按 messageId 幂等落库 + 推送
 ```
 
 - **exchange 模块**：消费 `exchange-order`，按 symbol 取对应 `CoinTrader`，调用 `trader.trade(order)`。
-- **CoinTrader**：单交易对、内存订单簿；撮合结果通过 `flushMatchResult` 统一出口。
+- **CoinTrader**：单交易对、内存订单簿；撮合结果通过 `flushMatchResult` 统一出口；**每条 MatchResult 生成全局 messageId（UUID）**，供消费端幂等。
 - **方案 A 下**：`flushMatchResult` 只调用 `matchResultPublisher.publish(MatchResult)`，不发 `exchange-trade` / `exchange-order-completed`。
-- **market 模块**：消费 `exchange-match-result`，解析出 trades + completedOrders，调用 `processMatchResult` 单事务落库并推送。
+- **market 模块**：消费 `exchange-match-result`，解析出 messageId、trades、completedOrders；调用 **processMatchResultIdempotent**，同一 messageId 只落库一次，重复消费跳过；再推送行情与订单通知。
 
 ### 1.2 CoinTrader 撮合入口与分支（当前实现）
 
@@ -34,7 +34,8 @@
 ### 1.3 撮合结果统一出口（flushMatchResult）
 
 - **有 MatchResultPublisher（当前配置）**：  
-  `matchResultPublisher.publish(new MatchResult(symbol, ts, trades, completedOrders))`，撮合线程不直接发 Kafka，立即返回。
+  每条结果生成全局 **messageId = UUID.randomUUID().toString()**，再  
+  `matchResultPublisher.publish(new MatchResult(messageId, symbol, ts, trades, completedOrders))`；撮合线程不直接发 Kafka，立即返回。messageId 随消息写入 WAL 并发往 Kafka，供 market 幂等去重。
 - **无 MatchResultPublisher（回退）**：  
   同步发 `exchange-trade`（成交明细）和 `exchange-order-completed`（已完全成交订单），带有限次数重试；失败打 ERROR 日志。
 
@@ -61,9 +62,9 @@
 
 ### 2.4 文件与格式
 
-- **WAL 文件**：`{match.wal.path}/match-{symbol}.wal`（symbol 中 `/` 替换为 `-`），追加写入，每行一条 `MatchResult` 的 JSON。
+- **WAL 文件**：`{match.wal.path}/match-{symbol}.wal`（symbol 中 `/` 替换为 `-`），追加写入，每行一条 `MatchResult` 的 JSON（含 messageId、symbol、ts、trades、completedOrders）。
 - **偏移文件**：`{match.wal.path}/match-{symbol}.offset`，存已成功发送的 WAL 字节偏移（纯数字）。
-- **Kafka topic**：`exchange-match-result`，单条消息即一条 MatchResult（含 symbol、ts、trades、completedOrders）。
+- **Kafka topic**：`exchange-match-result`，单条消息即一条 MatchResult（含 **messageId**、symbol、ts、trades、completedOrders）。
 
 ### 2.5 故障与恢复（当前行为）
 
@@ -81,22 +82,31 @@
 - **方案 A 下**：撮合只发 `exchange-match-result`，market 只消费该 topic 时，同一批结果只会被处理一次。
 - **若 market 同时消费三个 topic**（`exchange-match-result`、`exchange-trade`、`exchange-order-completed`），例如兼容旧版或灰度，同一批撮合结果可能既在 `exchange-match-result` 里出现，又在旧 topic 出现，导致同一笔成交/同一笔订单完成被处理两次，必须幂等防重复落库与重复推送。
 
-### 3.2 当前实现中的幂等相关行为
+### 3.2 messageId 幂等改造（当前实现）
+
+- **发送端**：`CoinTrader.flushMatchResult` 在构造 MatchResult 前生成 `messageId = UUID.randomUUID().toString()`，并写入 MatchResult；该 messageId 随 WAL 与 Kafka 消息一起下发。
+- **消息体**：MatchResult 含字段 **messageId**（String，可选；旧消息无此字段时为 null）。
+- **消费端**：market 的 `handleMatchResult` 解析出 `messageId`，调用 **processMatchResultIdempotent(messageId, trades, completedOrders, secondReferrerAward)**：
+  - **messageId 为 null 或空**：直接调用 processMatchResult，兼容旧消息。
+  - **已处理过**：若表 `processed_match_result_message` 中已存在该 messageId，返回 false，不落库、不推送，实现幂等跳过。
+  - **未处理过**：先 insert 该 messageId，再调用 processMatchResult，同一事务；返回 true，继续后续推送与行情。
+- **表**：`processed_match_result_message`（id, message_id 唯一），用于记录已处理的 messageId，避免重复落库与重复推送。
+
+### 3.3 其他幂等相关行为
 
 - **订单完成 tradeCompleted(orderId, ...)**（exchange-core ExchangeOrderService）：  
   若订单状态已非 `TRADING`（例如已是 COMPLETED），直接返回错误，不更新订单、不执行退冻结。  
   → 同一订单完成被重复调用时，第二次不会重复改库与退币，但会返回错误码。
 
 - **成交明细 processExchangeTrade**（exchange-core ExchangeOrderService）：  
-  当前**无**按 tradeId（或其它唯一键）的去重；同一笔成交重复调用会导致重复写成交明细、重复更新钱包与流水。  
-  → 若存在重复消费，必须在消费前或 processExchangeTrade 内增加按 tradeId（或等价唯一键）的幂等。
+  在「按 messageId 只执行一次 processMatchResult」的前提下，单条消息内不会重复调用；若存在其他重复来源，仍需按 tradeId 等做明细级幂等。
 
-### 3.3 建议（与当前实现一致）
+### 3.4 建议（与当前实现一致）
 
-- **仅消费 exchange-match-result**：不订阅或不再处理 `exchange-trade` / `exchange-order-completed` 时，无需额外幂等逻辑。
+- **仅消费 exchange-match-result**：当前已通过 messageId + processed_match_result_message 做幂等；不订阅或不再处理 `exchange-trade` / `exchange-order-completed` 时，无需额外幂等逻辑。
 - **同时消费三个 topic**：  
-  - 订单完成：已通过“非 TRADING 直接返回”避免重复退冻结，建议显式按 orderId 视为已处理并跳过或返回成功。  
-  - 成交明细：需在落库前按 tradeId（或 orderId+价格+数量+时间等唯一键）去重，避免重复写 ExchangeOrderDetail 与重复加减资金。
+  - exchange-match-result 已按 messageId 幂等。  
+  - 订单完成 / 成交明细若从旧 topic 再次收到，tradeCompleted 对非 TRADING 会返回错误；成交明细仍建议按 tradeId 去重。
 
 ---
 
@@ -128,10 +138,12 @@
 | exchange | CoinTrader | 单交易对撮合引擎；flushMatchResult 调用 MatchResultPublisher.publish。 |
 | exchange | QueueAndWalMatchResultPublisher | 方案 A：队列 + WAL 写 + 按偏移发 Kafka。 |
 | exchange | CoinTraderConfig | 为每个启用交易对创建 CoinTrader 与 QueueAndWalMatchResultPublisher，并 start()。 |
-| exchange-core | MatchResult | 单条消息体：symbol, ts, trades, completedOrders。 |
+| exchange-core | MatchResult | 单条消息体：**messageId**（发送时生成）、symbol, ts, trades, completedOrders。 |
 | exchange-core | ExchangeOrderService.processMatchResult | 单事务：先处理本批 trades，再处理本批 completedOrders（tradeCompleted）。 |
+| exchange-core | ExchangeOrderService.processMatchResultIdempotent | 按 messageId 幂等：已存在则返回 false；否则 insert messageId 后 processMatchResult，同一事务。 |
 | exchange-core | ExchangeOrderService.tradeCompleted | 订单状态非 TRADING 则返回错误，不重复更新与退冻结。 |
-| market | ExchangeTradeConsumer.handleMatchResult | 消费 exchange-match-result，解析后调用 processMatchResult，再推送行情与订单通知。 |
+| exchange-core | ProcessedMatchResultMessage / ProcessedMatchResultMessageRepository | 表 processed_match_result_message（message_id 唯一），记录已处理的 messageId。 |
+| market | ExchangeTradeConsumer.handleMatchResult | 消费 exchange-match-result，解析 messageId 后调用 processMatchResultIdempotent；若返回 false 则跳过推送，否则继续推送行情与订单通知。 |
 | exchange-core | ExchangeOrderService.addOrder / addOrderForApi | 下单落库，设置 status=TRADING。 |
 | exchange-core | ExchangeOrderService.tradeCompleted | 完全成交时设置 status=COMPLETED 并退冻结。 |
 | 配置项 | match.wal.path | WAL 根目录，默认 data/wal。 |
