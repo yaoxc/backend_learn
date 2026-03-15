@@ -14,6 +14,7 @@
     → Kafka(exchange-match-result) → Market: ExchangeTradeConsumer（落库+推送）
                                     → Clearing 服务: 清算落库 + exchange-clearing-result
     → Kafka(exchange-clearing-result) → Settlement 服务: 结算落库 + exchange-fund-instruction
+    → Kafka(exchange-fund-instruction) → Fund 服务: 落库 + 执行钱包操作
 ```
 
 - **exchange 模块**：消费 `exchange-order`，按 symbol 取对应 `CoinTrader`，调用 `trader.trade(order)`。
@@ -21,7 +22,8 @@
 - **方案 A 下**：`flushMatchResult` 只调用 `matchResultPublisher.publish(MatchResult)`，不发 `exchange-trade` / `exchange-order-completed`。
 - **market 模块**：消费 `exchange-match-result`，解析出 messageId、trades、completedOrders；调用 **processMatchResultIdempotent**，同一 messageId 只落库一次，重复消费跳过；再推送行情与订单通知。
 - **clearing 模块（独立应用）**：同样消费 `exchange-match-result`（consumer group=market-clearing-group），计算清算结果落库并发送 `exchange-clearing-result`，供结算服务消费；与 market 解耦部署。
-- **settlement 模块（独立应用）**：消费 `exchange-clearing-result`（consumer group=market-settlement-group），生成资金指令落库并发送 `exchange-fund-instruction`，供资金服务（market 内）消费；与 market 解耦部署。
+- **settlement 模块（独立应用）**：消费 `exchange-clearing-result`（consumer group=market-settlement-group），生成资金指令落库并发送 `exchange-fund-instruction`，供资金服务消费；与 market 解耦部署。
+- **fund 模块（独立应用）**：消费 `exchange-fund-instruction`（consumer group=market-fund-group），落库 processed_fund_instruction 后按条执行钱包操作（member_wallet 加减可用/扣冻/解冻）；与 market 解耦部署。
 
 ### 1.2 CoinTrader 撮合入口与分支（当前实现）
 
