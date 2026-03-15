@@ -1,6 +1,6 @@
 package com.bizzan.bitrade.util;
 
-import com.mongodb.Mongo;
+// 升级说明：原误导入 com.mongodb.Mongo 未使用，已移除；仅使用 Decimal128 做转换
 import org.bson.types.Decimal128;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.ReadingConverter;

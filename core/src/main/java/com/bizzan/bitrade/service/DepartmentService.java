@@ -47,12 +47,12 @@ public class DepartmentService extends BaseService {
     }
 
     public Department findOne(Long departmentId) {
-        return departmentDao.findOne(departmentId);
+        return departmentDao.findById(departmentId).orElse(null);
     }
 
 
     public Department getDepartmentDetail(Long departmentId) {
-        Department department = departmentDao.findOne(departmentId);
+        Department department = departmentDao.findById(departmentId).orElse(null);
         Assert.notNull(department, "该部门不存在");
         return department;
     }
@@ -64,13 +64,14 @@ public class DepartmentService extends BaseService {
 
     @Transactional(rollbackFor = Exception.class)
     public MessageResult deletes(Long id) {
-        Department department = departmentDao.findOne(id);
+        Department department = departmentDao.findById(id).orElse(null);
         List<Admin> list = adminDao.findAllByDepartment(department);
         if (list != null && list.size() > 0) {
             MessageResult result = MessageResult.error("请先删除该部门下的所有用户");
             return result;
         }
-        departmentDao.delete(id);
+        // 升级说明：Spring Data 2.x 部分场景下 delete 需传实体而非 id，先查再删
+        departmentDao.delete(department);
         return MessageResult.success("删除成功");
     }
 

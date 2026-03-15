@@ -14,7 +14,8 @@ public interface MemberInviteStasticRankDao extends  BaseDao<MemberInviteStastic
 
 	MemberInviteStasticRank findByMemberId(Long memberId);
 	
-	MemberInviteStasticRank findById(Long id);
+	/** 升级说明：原 findById(Long) 与 CrudRepository.findById(ID) 返回 Optional 冲突，故改名为 findOneById。 */
+	MemberInviteStasticRank findOneById(Long id);
 	
 	/**
 	 * 获取最新排名

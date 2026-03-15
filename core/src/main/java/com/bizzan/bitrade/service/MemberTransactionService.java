@@ -21,6 +21,7 @@ import com.querydsl.jpa.impl.JPAQuery;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -39,7 +40,9 @@ import java.util.Map;
 public class MemberTransactionService extends BaseService {
     @Autowired
     private MemberTransactionDao transactionDao;
+    /** 升级说明：@Lazy 打破与 MemberWalletService 的循环依赖。Boot 2.6+ 默认禁止循环引用，二者互相注入会导致启动失败，对其中一侧懒加载即可。 */
     @Autowired
+    @Lazy
     private MemberWalletService walletService;
 
     /**
@@ -82,7 +85,7 @@ public class MemberTransactionService extends BaseService {
 
 
     public MemberTransaction findOne(Long id) {
-        return transactionDao.findOne(id);
+        return transactionDao.findById(id).orElse(null);
     }
 
 
@@ -122,7 +125,7 @@ public class MemberTransactionService extends BaseService {
         //排序方式 (需要倒序 这样    Criteria.sort("id","createTime.desc") ) //参数实体类为字段名
         Sort orders = Criteria.sortStatic("createTime.desc");
         //分页参数
-        PageRequest pageRequest = new PageRequest(pageNo, pageSize, orders);
+        PageRequest pageRequest = PageRequest.of(pageNo, pageSize, orders);
         //查询条件
         Criteria<MemberTransaction> specification = new Criteria<MemberTransaction>();
         specification.add(Restrictions.eq("memberId", uid, false));
@@ -134,7 +137,7 @@ public class MemberTransactionService extends BaseService {
         //排序方式 (需要倒序 这样    Criteria.sort("id","createTime.desc") ) //参数实体类为字段名
         Sort orders = Criteria.sortStatic("createTime.desc");
         //分页参数
-        PageRequest pageRequest = new PageRequest(pageNo-1, pageSize, orders);
+        PageRequest pageRequest = PageRequest.of(pageNo-1, pageSize, orders);
         //查询条件
         Criteria<MemberTransaction> specification = new Criteria<MemberTransaction>();
         specification.add(Restrictions.eq("memberId", uid, false));

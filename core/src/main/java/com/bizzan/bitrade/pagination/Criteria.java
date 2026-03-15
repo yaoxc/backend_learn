@@ -39,13 +39,14 @@ public class Criteria<T> implements Specification<T> {
     /**
      * 排序
      * QueryBuilderUtils.sort("name","id.desc");表示先以name升序，之后以xh降序
+     * 升级说明：Spring Data 2.x 使用 Sort.by(orders) 替代 new Sort(orders)。
      */
     public  Sort sort(String... fields) {
         List<Sort.Order> orders = new ArrayList<Sort.Order>();
         for(String f:fields) {
             orders.add(generateOrderStatic(f));
         }
-        return new Sort(orders);
+        return Sort.by(orders);
     }
 
     public static Sort sortStatic(String... fields) {
@@ -53,9 +54,10 @@ public class Criteria<T> implements Specification<T> {
         for(String f:fields) {
             orders.add(generateOrderStatic(f));
         }
-        return new Sort(orders);
+        return Sort.by(orders);
     }
 
+    /** 升级说明：Spring Data 2.x 中 Sort.Order 不再支持单参构造 Order(String)，需显式指定方向：Order(Direction.ASC, f)。 */
     private static Sort.Order generateOrderStatic(String f) {
         Sort.Order order = null;
         String[] ff = f.split("\\.");
@@ -67,7 +69,7 @@ public class Criteria<T> implements Specification<T> {
             }
             return order;
         }
-        order = new Sort.Order(f);
+        order = new Sort.Order(Sort.Direction.ASC, f);
         return order;
     }
 

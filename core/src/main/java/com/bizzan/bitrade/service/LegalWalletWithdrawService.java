@@ -28,7 +28,7 @@ public class LegalWalletWithdrawService extends TopBaseService<LegalWalletWithdr
     }
 
     public LegalWalletWithdraw findOne(Long id) {
-        return legalWalletWithdrawDao.findOne(id);
+        return legalWalletWithdrawDao.findById(id).orElse(null);
     }
 
     //审核通过
@@ -41,7 +41,8 @@ public class LegalWalletWithdrawService extends TopBaseService<LegalWalletWithdr
     public LegalWalletWithdraw findDetailWeb(Long id, Long memberId) {
         BooleanExpression and = QLegalWalletWithdraw.legalWalletWithdraw.id.eq(id)
                 .and(QLegalWalletWithdraw.legalWalletWithdraw.member.id.eq(memberId));
-        return legalWalletWithdrawDao.findOne(and);
+        // 升级说明：2.x 中 findOne(Predicate) 返回 Optional，需 .orElse(null)
+        return legalWalletWithdrawDao.findOne(and).orElse(null);
     }
 
     //提现

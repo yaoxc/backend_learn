@@ -38,8 +38,8 @@ public class LegalWalletRechargeService extends TopBaseService<LegalWalletRechar
             predicate = QLegalWalletRecharge.legalWalletRecharge.member.id.eq(memberId)
                     .and(QLegalWalletRecharge.legalWalletRecharge.state.eq(state));
         }
-        Sort sort = new Sort(new Sort.Order(Sort.Direction.DESC, "id"));
-        Pageable pageable = new PageRequest(pageNo - 1, pageSize, sort);
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
+        Pageable pageable = PageRequest.of(pageNo - 1, pageSize, sort);
         return legalWalletRechargeDao.findAll(predicate, pageable);
     }
 
@@ -47,11 +47,12 @@ public class LegalWalletRechargeService extends TopBaseService<LegalWalletRechar
     public LegalWalletRecharge findOneByIdAndMemberId(Long id, long memberId) {
         Predicate predicate = QLegalWalletRecharge.legalWalletRecharge.id.eq(id)
                 .and(QLegalWalletRecharge.legalWalletRecharge.member.id.eq(memberId));
-        return legalWalletRechargeDao.findOne(predicate);
+        // 升级说明：2.x 中 findOne(Predicate) 返回 Optional，需 .orElse(null)
+        return legalWalletRechargeDao.findOne(predicate).orElse(null);
     }
 
     public LegalWalletRecharge findOne(Long id) {
-        return legalWalletRechargeDao.findOne(id);
+        return legalWalletRechargeDao.findById(id).orElse(null);
     }
 
     @Override

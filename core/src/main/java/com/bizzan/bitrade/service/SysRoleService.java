@@ -47,7 +47,7 @@ public class SysRoleService extends TopBaseService<SysRole, SysRoleDao> {
     private SysPermissionDao sysPermissionDao;
 
     public SysRole findOne(Long id) {
-        SysRole role = sysRoleDao.findOne(id);
+        SysRole role = sysRoleDao.findById(id).orElse(null);
         return role;
     }
 
@@ -63,7 +63,8 @@ public class SysRoleService extends TopBaseService<SysRole, SysRoleDao> {
         if (list != null && list.size() > 0) {
             return MessageResult.error("删除失败，请先删除该角色下的所有用户");
         }
-        sysRoleDao.delete(id);
+        // 升级说明：2.x 使用 deleteById(ID) 替代 delete(ID)
+        sysRoleDao.deleteById(id);
         return MessageResult.success("删除成功");
     }
 

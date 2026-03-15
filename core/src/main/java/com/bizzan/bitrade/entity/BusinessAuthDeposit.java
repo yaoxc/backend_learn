@@ -1,7 +1,7 @@
 package com.bizzan.bitrade.entity;
 
 import lombok.Data;
-import org.hibernate.validator.constraints.NotBlank;
+import javax.validation.constraints.NotBlank;
 
 import com.bizzan.bitrade.constant.CommonStatus;
 

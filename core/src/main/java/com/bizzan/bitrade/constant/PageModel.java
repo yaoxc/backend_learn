@@ -33,6 +33,7 @@ public class PageModel {
             direction = directions ;
         }
     }
+    /** 升级说明：Spring Data 2.x 中 Sort/PageRequest 的构造函数改为包内或 protected，需使用静态工厂 Sort.by(orders)、PageRequest.of(...)。 */
     private Sort getSort() {
         List<Sort.Order> orders = null;
         setSort();
@@ -43,15 +44,15 @@ public class PageModel {
                 orders.add(new Sort.Order(direction.get(i), property.get(i)));
             }
         }
-        return new Sort(orders);
+        return Sort.by(orders);
     }
 
     public Pageable getPageable() {
         Sort sort = getSort();
         if (sort == null) {
-            return new PageRequest(pageNo - 1, pageSize);
+            return PageRequest.of(pageNo - 1, pageSize);
         }
-        return new PageRequest(pageNo - 1, pageSize, sort);
+        return PageRequest.of(pageNo - 1, pageSize, sort);
     }
 
     public Order directoryToOrder(Sort.Direction direction){

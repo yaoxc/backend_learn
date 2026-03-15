@@ -3,7 +3,7 @@ package com.bizzan.bitrade.entity;
 import cn.afterturn.easypoi.excel.annotation.Excel;
 import lombok.Data;
 import lombok.ToString;
-import org.hibernate.validator.constraints.NotBlank;
+import javax.validation.constraints.NotBlank;
 
 import com.bizzan.bitrade.constant.BooleanEnum;
 import com.bizzan.bitrade.constant.CommonStatus;

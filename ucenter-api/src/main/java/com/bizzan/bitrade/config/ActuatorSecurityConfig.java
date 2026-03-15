@@ -8,6 +8,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 
+/**
+ * 升级说明：原读取 management.context-path（1.x）配置监控路径；2.x 改为 management.endpoints.web.base-path，
+ * 若需与配置一致可改为 getProperty("management.endpoints.web.base-path")，默认 "/actuator"；当前为空则按 "" 处理，仍对根路径做 Basic 认证。
+ */
 @Configuration
 @EnableWebSecurity
 public class ActuatorSecurityConfig extends WebSecurityConfigurerAdapter {

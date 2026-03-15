@@ -56,7 +56,7 @@ public class SysAdvertiseService extends BaseService {
     }
 
     public SysAdvertise findOne(String serialNumber) {
-        return sysAdvertiseDao.findOne(serialNumber);
+        return sysAdvertiseDao.findById(serialNumber).orElse(null);
     }
 
     public int getMaxSort(){
@@ -87,14 +87,17 @@ public class SysAdvertiseService extends BaseService {
         return sysAdvertiseDao.querySysAdvertise(sort , cate);
     }
 
+    /** 升级说明：2.x 中 delete 按实体类型重载时需传实体，故先 findById 再 delete(entity)。 */
     public void deleteOne(String serialNumber) {
-        sysAdvertiseDao.delete(serialNumber);
+        SysAdvertise a = sysAdvertiseDao.findById(serialNumber).orElse(null);
+        if (a != null) sysAdvertiseDao.delete(a);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteBatch(String[] array) {
         for (String serialNumber : array) {
-            sysAdvertiseDao.delete(serialNumber);
+            SysAdvertise a = sysAdvertiseDao.findById(serialNumber).orElse(null);
+            if (a != null) sysAdvertiseDao.delete(a);
         }
     }
 

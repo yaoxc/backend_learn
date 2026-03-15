@@ -2,14 +2,15 @@ package com.bizzan.bitrade.dao;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.querydsl.QueryDslPredicateExecutor;
+// 升级说明：Spring Data 2.x 改为 QuerydslPredicateExecutor（原 QueryDslPredicateExecutor）
+import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 
 import com.bizzan.bitrade.entity.MemberDeposit;
 
 import java.util.List;
 
-public interface MemberDepositDao extends JpaRepository<MemberDeposit,Long>,QueryDslPredicateExecutor<MemberDeposit>{
+public interface MemberDepositDao extends JpaRepository<MemberDeposit,Long>,QuerydslPredicateExecutor<MemberDeposit>{
     MemberDeposit findByAddressAndTxid(String address,String txid);
     MemberDeposit findByTxid(String txid);
     

@@ -42,8 +42,9 @@ public class TopBaseService<E, D extends BaseDao> {
     protected D dao;
 
 
+    /** 升级说明：Spring Data 2.x 移除了 CrudRepository.findOne(ID)，改为 findById(ID).orElse(null)。 */
     public E findById(Serializable id) {
-        return (E) dao.findOne(id);
+        return (E) dao.findById(id).orElse(null);
     }
 
     public List<E> findAll() {
@@ -107,13 +108,14 @@ public class TopBaseService<E, D extends BaseDao> {
 
     /**
      * 分页排序查询 querydsl
-     *
+     * 升级说明：Spring Data 2.x 使用 Sort.by(Direction, String...)、PageRequest.of(...) 替代 new Sort/new PageRequest。
      * @param pagenation
      * @return
      */
     public Pagenation<E> pageQuery(Pagenation pagenation, Predicate predicate) {
-        Sort sort = new Sort(pagenation.getPageParam().getDirection(), pagenation.getPageParam().getOrders());
-        Pageable pageable = new PageRequest(pagenation.getPageParam().getPageNo() - 1, pagenation.getPageParam().getPageSize(), sort);
+        List<String> orderProps = pagenation.getPageParam().getOrders();
+        Sort sort = Sort.by(pagenation.getPageParam().getDirection(), orderProps.toArray(new String[0]));
+        Pageable pageable = PageRequest.of(pagenation.getPageParam().getPageNo() - 1, pagenation.getPageParam().getPageSize(), sort);
         Page<E> page = dao.findAll(predicate, pageable);
         return pagenation.setData(page.getContent(), page.getTotalElements(), page.getTotalPages());
     }

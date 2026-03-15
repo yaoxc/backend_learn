@@ -148,8 +148,8 @@ public class ExchangeOrderService extends BaseService {
      * @return
      */
     public Page<ExchangeOrder> findHistory(Long uid, String symbol, int pageNo, int pageSize) {
-        Sort orders = new Sort(new Sort.Order(Sort.Direction.DESC, "time"));
-        PageRequest pageRequest = new PageRequest(pageNo-1, pageSize, orders);
+        Sort sort = Sort.by(Sort.Direction.DESC, "time");
+        PageRequest pageRequest = PageRequest.of(pageNo-1, pageSize, sort);
         Criteria<ExchangeOrder> specification = new Criteria<ExchangeOrder>();
         specification.add(Restrictions.eq("symbol", symbol, true));
         specification.add(Restrictions.eq("memberId", uid, true));
@@ -188,8 +188,8 @@ public class ExchangeOrderService extends BaseService {
      * @return
      */
     public Page<ExchangeOrder> findPersonalHistory(Long uid, String symbol, ExchangeOrderType type, ExchangeOrderStatus status, String startTime, String endTime, ExchangeOrderDirection direction, int pageNo, int pageSize) {
-        Sort orders = new Sort(new Sort.Order(Sort.Direction.DESC, "time"));
-        PageRequest pageRequest = new PageRequest(pageNo - 1, pageSize, orders);
+        Sort sort = Sort.by(Sort.Direction.DESC, "time");
+        PageRequest pageRequest = PageRequest.of(pageNo - 1, pageSize, sort);
         Criteria<ExchangeOrder> specification = new Criteria<ExchangeOrder>();
         if(StringUtils.isNotEmpty(symbol)){
             specification.add(Restrictions.eq("symbol", symbol, true));
@@ -229,8 +229,8 @@ public class ExchangeOrderService extends BaseService {
      * @return
      */
     public Page<ExchangeOrder> findPersonalCurrent(Long uid, String symbol, ExchangeOrderType type, String startTime, String endTime, ExchangeOrderDirection direction, int pageNo, int pageSize) {
-        Sort orders = new Sort(new Sort.Order(Sort.Direction.DESC, "time"));
-        PageRequest pageRequest = new PageRequest(pageNo - 1, pageSize, orders);
+        Sort sort = Sort.by(Sort.Direction.DESC, "time");
+        PageRequest pageRequest = PageRequest.of(pageNo - 1, pageSize, sort);
         Criteria<ExchangeOrder> specification = new Criteria<ExchangeOrder>();
         if(StringUtils.isNotEmpty(symbol)){
             specification.add(Restrictions.eq("symbol", symbol, true));
@@ -259,8 +259,8 @@ public class ExchangeOrderService extends BaseService {
      * @return
      */
     public Page<ExchangeOrder> findCurrent(Long uid, String symbol, int pageNo, int pageSize) {
-        Sort orders = new Sort(new Sort.Order(Sort.Direction.DESC, "time"));
-        PageRequest pageRequest = new PageRequest(pageNo, pageSize, orders);
+        Sort sort = Sort.by(Sort.Direction.DESC, "time");
+        PageRequest pageRequest = PageRequest.of(pageNo, pageSize, sort);
         Criteria<ExchangeOrder> specification = new Criteria<ExchangeOrder>();
         specification.add(Restrictions.eq("symbol", symbol, true));
         specification.add(Restrictions.eq("memberId", uid, false));
@@ -449,7 +449,7 @@ public class ExchangeOrderService extends BaseService {
             } else {
                 aggregation.setUnit(order.getCoinSymbol());
             }
-            Member member = memberService.findOne(order.getMemberId());
+            Member member = (Member) memberService.findById(order.getMemberId());
             if (member != null) {
                 aggregation.setMemberId(member.getId());
                 aggregation.setUsername(member.getUsername());
@@ -534,7 +534,7 @@ public class ExchangeOrderService extends BaseService {
             } else {
                 aggregation.setUnit(order.getCoinSymbol());
             }
-            Member member = memberService.findOne(order.getMemberId());
+            Member member = (Member) memberService.findById(order.getMemberId());
             if (member != null) {
                 aggregation.setMemberId(member.getId());
                 aggregation.setUsername(member.getUsername());
@@ -639,7 +639,7 @@ public class ExchangeOrderService extends BaseService {
         RewardPromotionSetting rewardPromotionSetting = rewardPromotionSettingService.findByType(PromotionRewardType.EXCHANGE_TRANSACTION);
         if (rewardPromotionSetting != null && member.getInviterId() != null) {
             if (!(DateUtil.diffDays(new Date(), member.getRegistrationTime()) > rewardPromotionSetting.getEffectiveTime())) {
-                Member member1 = memberService.findOne(member.getInviterId());
+                Member member1 = (Member) memberService.findById(member.getInviterId());
                 MemberWallet memberWallet = memberWalletService.findByCoinUnitAndMemberId(incomeSymbol, member1.getId());
                 JSONObject jsonObject = JSONObject.parseObject(rewardPromotionSetting.getInfo());
                 BigDecimal reward = BigDecimalUtils.mulRound(fee, BigDecimalUtils.getRate(jsonObject.getBigDecimal("one")), 8);
@@ -669,7 +669,7 @@ public class ExchangeOrderService extends BaseService {
                     return;
                 }
                 if (member1.getInviterId() != null && !(DateUtil.diffDays(new Date(), member1.getRegistrationTime()) > rewardPromotionSetting.getEffectiveTime())) {
-                    Member member2 = memberService.findOne(member1.getInviterId());
+                    Member member2 = (Member) memberService.findById(member1.getInviterId());
                     MemberWallet memberWallet1 = memberWalletService.findByCoinUnitAndMemberId(incomeSymbol, member2.getId());
                     BigDecimal reward1 = BigDecimalUtils.mulRound(fee, BigDecimalUtils.getRate(jsonObject.getBigDecimal("two")), 8);
                     if (reward1.compareTo(BigDecimal.ZERO) > 0) {
@@ -715,7 +715,7 @@ public class ExchangeOrderService extends BaseService {
     }
 
     public ExchangeOrder findOne(String id) {
-        return exchangeOrderRepository.findOne(id);
+        return exchangeOrderRepository.findById(id).orElse(null);
     }
 
     @Transactional(readOnly = true)
@@ -945,8 +945,8 @@ public class ExchangeOrderService extends BaseService {
      * @return
      */
     public Page<ExchangeOrder> findCurrentTradingOrderForApi(long memberId, String symbol, ExchangeOrderDirection direction, int pageNo, int pageSize) {
-        Sort orders = new Sort(new Sort.Order(Sort.Direction.DESC, "time"));
-        PageRequest pageRequest = new PageRequest(pageNo, pageSize, orders);
+        Sort sort = Sort.by(Sort.Direction.DESC, "time");
+        PageRequest pageRequest = PageRequest.of(pageNo, pageSize, sort);
         Criteria<ExchangeOrder> specification = new Criteria<ExchangeOrder>();
         specification.add(Restrictions.eq("symbol", symbol, false));
         specification.add(Restrictions.eq("memberId", memberId, false));

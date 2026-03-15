@@ -8,9 +8,12 @@ import org.springframework.cache.annotation.CachingConfigurerSupport;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+
+import java.time.Duration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 
@@ -24,16 +27,19 @@ public class RedisCacheConfig extends CachingConfigurerSupport {
 
     /**
      * 缓存管理器.
+     * 升级说明：Spring Data Redis 2.x 移除了 RedisCacheManager(RedisTemplate) 构造器及 setDefaultExpiration(int)，
+     * 改为使用 RedisCacheManager.builder(connectionFactory) + RedisCacheConfiguration.entryTtl(Duration)，否则会报构造器/方法未定义。
      *
-     * @param redisTemplate
-     * @return
+     * @param connectionFactory Redis 连接工厂，由 Spring 自动注入
+     * @return CacheManager
      */
     @Bean
-    public CacheManager cacheManager(RedisTemplate<?, ?> redisTemplate) {
-        RedisCacheManager cacheManager = new RedisCacheManager(redisTemplate);
-        // 设置缓存默认过期时间30分钟（全局的）
-        cacheManager.setDefaultExpiration(1800);
-        return cacheManager;
+    public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(Duration.ofSeconds(1800)); // 默认过期时间 30 分钟
+        return RedisCacheManager.builder(connectionFactory)
+                .cacheDefaults(defaultConfig)
+                .build();
     }
 
     /**

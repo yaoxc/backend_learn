@@ -14,7 +14,8 @@ public interface MemberInviteStasticDao extends  BaseDao<MemberInviteStastic> {
 
 	MemberInviteStastic findByMemberId(Long memberId);
 	
-	MemberInviteStastic findById(Long id);
+	/** 升级说明：原 findById(Long) 与 CrudRepository.findById(ID) 返回 Optional 冲突，故改名为 findOneById，避免与 2.x API 冲突。 */
+	MemberInviteStastic findOneById(Long id);
 	
 	@Query(value = "select * from member_invite_stastic order by estimated_reward desc limit :count", nativeQuery = true)
 	List<MemberInviteStastic> getTopTotalAmount(@Param("count") int count);

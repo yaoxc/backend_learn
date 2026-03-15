@@ -22,6 +22,7 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,9 @@ public class MemberWalletService extends BaseService {
     private MemberWalletDao memberWalletDao;
     @Autowired
     private CoinDao coinDao;
+    /** 升级说明：@Lazy 打破与 MemberTransactionService 的循环依赖，与对端 @Lazy 配合，任一方先创建时都能注入对方代理，避免 Boot 2.6+ 的循环引用错误。 */
     @Autowired
+    @Lazy
     private MemberTransactionService transactionService;
     @Autowired
     private MemberDepositDao depositDao;
@@ -181,7 +184,7 @@ public class MemberWalletService extends BaseService {
 
         transaction = transactionService.save(transaction);
 
-        Member mRes = memberDao.findOne(wallet.getMemberId());
+        Member mRes = memberDao.findById(wallet.getMemberId()).orElse(null);
         if (mRes != null) {
             try {
                 smsProvider.sendCustomMessage(mRes.getMobilePhone(), "尊敬的用户：恭喜您充值" + wallet.getCoin().getUnit() + "成功，充值数量为：" + amount.stripTrailingZeros().toPlainString());
@@ -404,7 +407,8 @@ public class MemberWalletService extends BaseService {
     public MemberWallet findOneByCoinNameAndMemberId(String coinName, long memberId) {
         BooleanExpression and = QMemberWallet.memberWallet.coin.name.eq(coinName)
                 .and(QMemberWallet.memberWallet.memberId.eq(memberId));
-        return memberWalletDao.findOne(and);
+        // 升级说明：Spring Data 2.x 中 QuerydslPredicateExecutor.findOne(Predicate) 返回 Optional<T>，需 .orElse(null) 得到实体
+        return memberWalletDao.findOne(and).orElse(null);
     }
 
     public Page<MemberWalletDTO> joinFind(List<Predicate> predicates, QMember qMember, QMemberWallet qMemberWallet, PageModel pageModel) {

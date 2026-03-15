@@ -8,7 +8,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.validator.constraints.NotBlank;
+// 升级说明：Bean Validation 2 / Boot 2.7 中 @NotBlank 改用 javax.validation.constraints（原 org.hibernate.validator.constraints）
+import javax.validation.constraints.NotBlank;
 
 import javax.persistence.*;
 import java.util.Date;

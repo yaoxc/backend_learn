@@ -34,11 +34,12 @@ public class AnnouncementService extends BaseService<Announcement> {
     }
 
     public Announcement findById(Long id) {
-        return announcementDao.findOne(id);
+        return announcementDao.findById(id).orElse(null);
     }
 
+    /** 升级说明：Spring Data 2.x 使用 deleteById(ID) 替代 delete(ID)。 */
     public void deleteById(Long id) {
-        announcementDao.delete(id);
+        announcementDao.deleteById(id);
     }
 
     @Transactional(rollbackFor = Exception.class)

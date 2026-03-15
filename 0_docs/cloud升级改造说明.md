@@ -76,7 +76,58 @@
 
 ---
 
-## 八、与根 POM 的关系（当前）
+## 八、方式二：core 编译与 ucenter-api 本机启动
+
+为支持本机直接 `mvn -pl ucenter-api spring-boot:run`，对 **core** 做了以下改造（并在代码中加了改造注释）：
+
+1. **QueryDSL Q 类生成**  
+   - 原 `apt-maven-plugin` 与 QueryDSL 4.x 存在二进制不兼容（NoClassDefFoundError / NoSuchMethodError）。  
+   - 改为：用 **maven-resources-plugin** 将 `entity` 包复制到 `target/entity-src`，再用 **maven-compiler-plugin** 仅对该目录执行 `proc:only` 与 `annotationProcessorPaths`（querydsl-apt + querydsl-jpa），将 Q 类生成到 `target/generated-sources/java`，最后用 **build-helper-maven-plugin** 将该目录加入源路径。详见 `core/pom.xml` 内注释。
+
+2. **Spring Data JPA**  
+   - `QueryDslPredicateExecutor` 改为 **QuerydslPredicateExecutor**（Spring Data 2.x 重命名），已在 BaseDao、各 Dao 及 RewardActivitySettingService 的 import 处加注释。
+
+3. **Bean Validation**  
+   - `@NotBlank` / `@NotEmpty` 由 `org.hibernate.validator.constraints` 改为 **javax.validation.constraints**（Bean Validation 2），并在 core 中增加 **spring-boot-starter-validation**、**dom4j** 依赖；实体类 import 处已加注释。
+
+4. **Spring Session**  
+   - `SmartHttpSessionStrategy` 由实现 `HttpSessionStrategy` 改为实现 **HttpSessionIdResolver**（Cookie/Header 使用 `CookieHttpSessionIdResolver`、`HeaderHttpSessionIdResolver`），类上已加升级说明注释。  
+   - ucenter-api / exchange-api 的 `HttpSessionConfig` 中 Bean 由 `httpSessionStrategy()` 改为 **httpSessionIdResolver()**，并加注释。
+
+5. **其他**  
+   - `Decimal128ToBigDecimalConverter` 移除未使用的 `com.mongodb.Mongo` import，并加注释。  
+   - 根 POM 的 **spring-session-core** 版本为 2.6.3（与 Boot 2.7 兼容）。
+
+本机启动 ucenter-api：先 `mvn install -pl core,exchange-core,ucenter-api -am -DskipTests`，再 `mvn -pl ucenter-api spring-boot:run -Dspring-boot.run.profiles=dev -Deureka.client.service-url.default-zone=http://localhost:7421/eureka/`（需本地 MySQL、Redis、Mongo、Kafka 或改 dev 配置中的地址）。
+
+---
+
+## 九、Spring Data 2.x API 适配（core 模块）
+
+为与 Spring Data 2.x / JpaRepository 兼容，core 中做了以下修改，**关键处已加「升级说明」注释**：
+
+| 改造点 | 原因 | 修改方式 |
+|--------|------|----------|
+| **findOne(ID)** | 2.x 移除 CrudRepository.findOne(ID) | 改为 **findById(id).orElse(null)** |
+| **findOne(Predicate)** | QuerydslPredicateExecutor.findOne 返回 Optional\<T\> | 调用处加 **.orElse(null)**（如 MemberWalletService、LegalWalletRechargeService、LegalWalletWithdrawService） |
+| **Sort / PageRequest 构造** | 2.x 中构造函数改为包内或 protected | 使用 **Sort.by(orders)**、**Sort.by(Direction, String...)**、**PageRequest.of(page, size)** / **PageRequest.of(page, size, sort)** |
+| **Sort.Order(String)** | 2.x 不再支持单参构造 | 改为 **Sort.Order(Sort.Direction.ASC, property)**（Criteria） |
+| **delete(ID)** | 部分场景 2.x 需按实体删除 | 使用 **deleteById(id)**，或先 **findById(id).orElse(null)** 再 **delete(entity)**（Department、SysAdvertise、InitPlate、SysHelp 等） |
+| **Dao 自定义 findById** | 与 CrudRepository.findById 返回 Optional 冲突 | MemberInviteStasticDao / MemberInviteStasticRankDao 的 findById 改名为 **findOneById**，调用处同步修改 |
+
+涉及文件：PageModel、Criteria、TopBaseService、各 Service（如 AnnouncementService、DepartmentService、SysAdvertiseService、OtcCoinService、CoinService、SysPermissionService、SysRoleService、InitPlateService、SysHelpService）、MemberInviteStasticDao / MemberInviteStasticRankDao、MemberInviteStasticService、MemberWalletService、LegalWalletRechargeService、LegalWalletWithdrawService 等。具体见代码内「升级说明」注释。
+
+---
+
+## 十、与根 POM 的关系（当前）
 
 - 根 POM 的 parent 为 **spring-boot-starter-parent 2.7.18**，`<modules>` 包含 cloud 等所有模块。
 - **cloud** 的父 POM 为 **bitrade-parent**，与其余模块一致，Spring Boot 与 Spring Cloud 版本由根 POM 与 BOM 统一管理。
+
+---
+
+## 十一、core 模块 Q 类与编译插件（简要）
+
+- **Q 类**（QMember、QOrder 等）：由 QueryDSL 在编译期根据 JPA 实体自动生成，不提交仓库。core 使用 **querydsl-apt（classifier=jpa）** 在 compile 阶段生成到 `target/generated-sources/java`，并通过 **build-helper-maven-plugin** 将该目录加入源码路径。
+- **Lombok**：在 maven-compiler-plugin 的 **annotationProcessorPaths** 中显式加入 Lombok（版本 1.18.38），以兼容 JDK 17+ 并避免与 QueryDSL 处理器冲突；同时 1.18.38 可避免在 JDK 24+ 上出现 TypeTag 相关错误。
+- **endPosTable already set（JDK 8）**：在 JDK 8 下，Lombok 与 QueryDSL 同时做注解处理时可能触发 javac 缺陷 JDK-8067747（Java 9 已修复）。core 已做缓解：**fork=true**（独立 JVM 编译）、**generate-sources 阶段清空 target/generated-sources/java**。若仍报错，请先执行 **mvn clean compile -pl core** 或使用 **Java 11+** 编译。

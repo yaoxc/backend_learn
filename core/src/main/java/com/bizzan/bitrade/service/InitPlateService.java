@@ -27,16 +27,18 @@ public class InitPlateService extends BaseService {
     public InitPlate saveAndFlush(InitPlate initPlate) {
        return initPlateDao.saveAndFlush(initPlate);
     }
+    /** 升级说明：2.x 中 delete 需传实体时，先 findById 再 delete(entity)。 */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(long id){
-        initPlateDao.delete(id);
+        InitPlate e = initPlateDao.findById(id).orElse(null);
+        if (e != null) initPlateDao.delete(e);
     }
 
     public Page<InitPlate> findAllByPage(Criteria<InitPlate> specification, PageRequest pageRequest) {
         return initPlateDao.findAll(specification,pageRequest);
     }
     public InitPlate findByInitPlateId(long id){
-        return initPlateDao.findOne(id);
+        return initPlateDao.findById(id).orElse(null);
     }
 }

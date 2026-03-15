@@ -28,13 +28,21 @@ public class CheckExchangeRate {
     
     private String serviceName = "bitrade-market";
     
+    /**
+     * 升级说明：syncRate 通过服务名 bitrade-market 调 market 服务；本地未起 Eureka 或 market 未注册时，
+     * LoadBalancer 无可用实例会抛 Service Instance cannot be null。此处 try-catch 做容错，仅打 debug 日志不抛错，避免定时任务刷屏。
+     */
     @Scheduled(fixedRate = 60 * 1000)
     public void syncRate() {
-        BigDecimal cnyRate = getUsdCnyRate();
-        factory.getCoins().forEach((symbol, value) -> {
-            BigDecimal usdRate = getUsdRate(symbol);
-            factory.set(symbol, usdRate, cnyRate.multiply(usdRate).setScale(2, RoundingMode.UP));
-        });
+        try {
+            BigDecimal cnyRate = getUsdCnyRate();
+            factory.getCoins().forEach((symbol, value) -> {
+                BigDecimal usdRate = getUsdRate(symbol);
+                factory.set(symbol, usdRate, cnyRate.multiply(usdRate).setScale(2, RoundingMode.UP));
+            });
+        } catch (Exception e) {
+            log.debug("syncRate skip: market service unavailable, {}", e.getMessage());
+        }
     }
     
     /**
@@ -53,26 +61,33 @@ public class CheckExchangeRate {
     }
     
     private BigDecimal getUsdRate(String unit) {
-        String url = "http://" + serviceName + "/market/exchange-rate/usd/{coin}";
-        ResponseEntity<MessageResult> result = restTemplate.getForEntity(url, MessageResult.class, unit);
-        log.info("remote call:url={},unit={}", url, unit);
-        if (result.getStatusCode().value() == 200 && result.getBody().getCode() == 0) {
-            BigDecimal rate = new BigDecimal((String) result.getBody().getData());
-            return rate;
-        } else {
-            return BigDecimal.ZERO;
+        try {
+            String url = "http://" + serviceName + "/market/exchange-rate/usd/{coin}";
+            ResponseEntity<MessageResult> result = restTemplate.getForEntity(url, MessageResult.class, unit);
+            log.info("remote call:url={},unit={}", url, unit);
+            if (result.getStatusCode().value() == 200 && result.getBody() != null && result.getBody().getCode() == 0) {
+                BigDecimal rate = new BigDecimal((String) result.getBody().getData());
+                return rate;
+            }
+        } catch (Exception e) {
+            log.trace("getUsdRate {} failed: {}", unit, e.getMessage());
         }
+        return BigDecimal.ZERO;
     }
 
+    /** 同上，getUsdCnyRate 失败时容错返回 ZERO。 */
     private BigDecimal getUsdCnyRate() {
-        String url = "http://" + serviceName + "/market/exchange-rate/usd-cny";
-        ResponseEntity<MessageResult> result = restTemplate.getForEntity(url, MessageResult.class);
-        log.info("remote call:url={}", url);
-        if (result.getStatusCode().value() == 200 && result.getBody().getCode() == 0) {
-            BigDecimal rate = new BigDecimal((Double) result.getBody().getData());
-            return rate;
-        } else {
-            return BigDecimal.ZERO;
+        try {
+            String url = "http://" + serviceName + "/market/exchange-rate/usd-cny";
+            ResponseEntity<MessageResult> result = restTemplate.getForEntity(url, MessageResult.class);
+            log.info("remote call:url={}", url);
+            if (result.getStatusCode().value() == 200 && result.getBody() != null && result.getBody().getCode() == 0) {
+                BigDecimal rate = new BigDecimal((Double) result.getBody().getData());
+                return rate;
+            }
+        } catch (Exception e) {
+            log.trace("getUsdCnyRate failed: {}", e.getMessage());
         }
+        return BigDecimal.ZERO;
     }
 }

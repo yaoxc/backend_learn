@@ -15,7 +15,8 @@ public class MemberServiceTest extends BaseTest {
 	
 	@Test
 	public void test() {
-        Member member=memberService.findOne(25L);
+        // 升级说明：BaseService/TopBaseService 未指定泛型时 findById 擦除为 Object，需强转
+        Member member = (Member) memberService.findById(25L);
         System.out.println(">>>>>>>>>>>>>>"+member);
         
 	}

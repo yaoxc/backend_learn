@@ -40,9 +40,20 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- 升级说明：测试类使用 JUnit 4 (@RunWith、@Test)，显式引入 junit 以免 testCompile 找不到 org.junit -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<!-- 2.3+ 起 validation 不再随 starter-web 引入，ApplicationConfig.getValidator 需 javax.validation.ValidatorFactory -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -68,10 +79,10 @@
 			<groupId>com.alibaba</groupId>
 			<artifactId>druid</artifactId>
 		</dependency>
+		<!-- 升级说明：Spring Session 2.x 才提供 HttpSessionIdResolver，且与 Boot 2.7 兼容；1.x 的 spring-session 已过时，改用 spring-session-data-redis -->
 		<dependency>
 			<groupId>org.springframework.session</groupId>
-			<artifactId>spring-session</artifactId>
-			<version>1.3.1.RELEASE</version>
+			<artifactId>spring-session-data-redis</artifactId>
 		</dependency>
 		<!-- 发送邮件. -->
 		<dependency>
@@ -100,6 +111,14 @@
 			<artifactId>core</artifactId>
 			<version>1.0</version>
 		</dependency>
+		<!-- core 依赖的 spark-core 为 system 作用域，不会传递；ucenter-api 启动时会加载 core 的 SystemConfig（依赖 com.sparkframework.sql.DB），故此处显式引用同一 jar -->
+		<dependency>
+			<groupId>com.sparkframework</groupId>
+			<artifactId>spark-core</artifactId>
+			<version>2.6.0</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/../core/lib/spark-core-2.6.0.jar</systemPath>
+		</dependency>
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
@@ -124,6 +143,45 @@
 			<artifactId>exchange-core</artifactId>
 			<version>1.0</version>
 		</dependency>
+		<!-- 升级说明：core 内 DiyiSMSProvider 依赖 dom4j，ucenter-api 依赖 core 但 core 的 POM 可能无效导致传递依赖缺失，运行时内省会报 ClassNotFoundException: org.dom4j.DocumentException，故此处显式引入。 -->
+		<dependency>
+			<groupId>org.dom4j</groupId>
+			<artifactId>dom4j</artifactId>
+			<version>2.1.4</version>
+		</dependency>
+		<!-- 升级说明：GeetestController 静态块使用 MultiThreadedHttpConnectionManager，若缺 commons-httpclient 会 NoClassDefFoundError，故显式引入。 -->
+		<dependency>
+			<groupId>commons-httpclient</groupId>
+			<artifactId>commons-httpclient</artifactId>
+			<version>3.1</version>
+		</dependency>
+		<!-- 升级说明：NECaptchaVerifier 使用 org.apache.commons.lang3.Validate，缺 commons-lang3 时 RegisterController 构造会 NoClassDefFoundError，故显式引入。 -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+		</dependency>
+		<!-- 升级说明：GeetestLib 使用 org.json.JSONObject 等，clean 编译时若无传递依赖会报程序包 org.json 不存在，故显式引入。 -->
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20230227</version>
+		</dependency>
+		<!-- 升级说明：GeetestController/UploadController 使用 com.aliyun.oss，缺 aliyun-sdk-oss 会编译报错，故显式引入。 -->
+		<dependency>
+			<groupId>com.aliyun.oss</groupId>
+			<artifactId>aliyun-sdk-oss</artifactId>
+			<version>2.8.1</version>
+		</dependency>
+		<!-- 升级说明：UploadController 使用 ServletFileUpload、FileUtils，缺 commons-fileupload/commons-io 会编译报错，故显式引入。 -->
+		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.11.0</version>
+		</dependency>
 	</dependencies>
 	<profiles>
 		<profile>
@@ -140,10 +198,11 @@
 			</build>
 			<!--<properties> <project.profile>application</project.profile> </properties> -->
 		</profile>
+		<!-- 仅 dev 默认激活，避免 test 的空 application.properties 覆盖 dev 配置导致 Eureka 等连不上；需用 test 时显式 -Ptest -->
 		<profile>
 			<id>test</id>
 			<activation>
-				<activeByDefault>true</activeByDefault>
+				<activeByDefault>false</activeByDefault>
 			</activation>
 			<build>
 				<resources>
