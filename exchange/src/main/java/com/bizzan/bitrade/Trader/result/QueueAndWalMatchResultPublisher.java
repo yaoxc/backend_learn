@@ -56,23 +56,31 @@ public class QueueAndWalMatchResultPublisher implements MatchResultPublisher {
         this.offsetPath = Paths.get(this.walBasePath, "match-" + safeSymbol + ".offset");
     }
 
+    /**
+     * 撮合结果入队，供 Writer 线程写 WAL。撮合线程调用后不写 Kafka，仅入队。
+     * <ul>
+     *   <li>无成交且无完成订单时跳过写入，减少无效 WAL 与 Kafka 消息。</li>
+     *   <li>队列满时：使用 {@code put(result)} 阻塞入队，直到 Writer 消费掉一条腾出空位再放入，
+     *       保证不丢失任何一条 MatchResult（若丢弃会导致未写 WAL、未发 Kafka，订单/资金不一致）。</li>
+     *   <li>代价：若 Writer 或 Sender 很慢或卡住，撮合线程会在 put 上阻塞，形成背压，撮合变慢甚至停住。
+     *       一般更可接受撮合慢一点而非丢撮合结果。</li>
+     *   <li>若需「宁可丢也不阻塞」：可改回 {@code offer(result, timeout, unit)}，超时丢弃并打 ERROR，
+     *       注释中需写明会丢数据、会导致订单/资金不一致。</li>
+     * </ul>
+     */
     @Override
     public void publish(MatchResult result) {
         if (result == null) {
             return;
         }
-        // 无成交且无完成订单时可不写入，减少无效记录
+        // 无成交且无完成订单时可不写入，减少无效 WAL 记录与 Kafka 消息
         if ((result.getTrades() == null || result.getTrades().isEmpty())
                 && (result.getCompletedOrders() == null || result.getCompletedOrders().isEmpty())) {
             return;
         }
         try {
-            boolean offered = queue.offer(result, 100, TimeUnit.MILLISECONDS);
-            if (!offered) {
-                log.error("[{}] match result queue full, drop result. trades={}, completedOrders={}",
-                        symbol, result.getTrades() != null ? result.getTrades().size() : 0,
-                        result.getCompletedOrders() != null ? result.getCompletedOrders().size() : 0);
-            }
+            // 阻塞入队，队列满时撮合线程在此等待，避免丢弃导致订单/资金不一致
+            queue.put(result);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("[{}] publish interrupted", symbol, e);
@@ -156,6 +164,9 @@ public class QueueAndWalMatchResultPublisher implements MatchResultPublisher {
                         offset += line.getBytes(StandardCharsets.UTF_8).length + 1;
                         boolean sent = sendWithRetry(line);
                         if (sent) {
+                            // 发一条写一次偏移：宕机重启后从未发位置继续，最多重发本条；若改为批量写则恢复时可能多重发一批，下游需幂等。
+                            // 性能：单次为小文件覆盖写且未 fsync，常见撮合量下通常非主瓶颈；若单 symbol 数千条/秒可考虑按 N 条或间隔批量写偏移。
+                            // 业界：高吞吐流水线常见做法为按 N 条/按间隔批量写 checkpoint，依赖下游幂等；本实现采用逐条写，偏保守、恢复语义更简单。
                             writeOffset(offset);
                         } else {
                             offset = lineStartOffset;
