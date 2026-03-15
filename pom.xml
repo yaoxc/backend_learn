@@ -18,6 +18,7 @@
         <module>exchange-api</module>
 		<module>exchange-relay</module>
 		<module>clearing</module>
+		<module>settlement</module>
         <module>ucenter-api</module>
         <module>cloud</module>
 		<module>wallet/rpc-common</module>
