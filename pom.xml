@@ -30,23 +30,25 @@
 		<module>test</module>
 	</modules>
 
+	<!-- 升级说明：原 1.5.9 升级为 2.7.18，与 cloud 统一，全项目版本由本 parent 统一管理 -->
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>1.5.9.RELEASE</version>
+		<version>2.7.18</version>
 		<relativePath />
 		<!-- lookup parent from repository -->
 	</parent>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<project.build.jdk_version>1.8</project.build.jdk_version>
-		<!-- spring -->
-		<spring-cloud.version>Edgware.RELEASE</spring-cloud.version>
-		<spring-boot_version>1.5.9.RELEASE</spring-boot_version>
-		<!-- 数据库连接 -->
-		<druid_version>1.1.9</druid_version>
-		<mysql.version>8.0.11</mysql.version>
+		<!-- 使用 java.version 供 parent 2.7 的 compiler 等插件读取（原为 project.build.jdk_version） -->
+		<java.version>1.8</java.version>
+		<!-- Spring Cloud 2021.0.x 与 Boot 2.7 配套；Boot 版本由 parent 管理，此处不再定义 spring-boot_version -->
+		<spring-cloud.version>2021.0.8</spring-cloud.version>
+		<!-- Druid 1.2.x 与 Spring Boot 2.7 兼容（1.1.x 为 1.5 时代版本） -->
+		<druid_version>1.2.20</druid_version>
+		<!-- MySQL 驱动 8.0.33，与 2.7 及 MySQL 8 兼容 -->
+		<mysql.version>8.0.33</mysql.version>
 		<!-- commons包 -->
 		<commons-codec_version>1.10</commons-codec_version>
 		<commons-fileupload_version>1.3</commons-fileupload_version>
@@ -64,74 +66,60 @@
 		<log4j_version>1.2.16</log4j_version>
 		<logback_version>1.1.11</logback_version>
 		<logback-ext-spring_version>0.1.4</logback-ext-spring_version>
-		<!-- Test Libs -->
-		<junit_version>4.12</junit_version>
+		<!-- Test Libs：JUnit 4.13.2 与 2.7 兼容（原 4.12） -->
+		<junit_version>4.13.2</junit_version>
 		<wallet_version>1.2</wallet_version>
+		<!-- Dubbo 2.7.x 与 Spring Boot 2.x 配套（根 POM 中 dependencyManagement 引用，需显式定义版本） -->
+		<dubbo_version>2.7.15</dubbo_version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
+			<!-- 升级说明：不再写 <version>，由 parent 2.7.18 统一管理，避免与 parent 冲突（原为 ${spring-boot_version}） -->
 			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-starter-cache</artifactId>
-				<version>${spring-boot_version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-starter-data-redis</artifactId>
-				<version>${spring-boot_version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-starter-freemarker</artifactId>
-				<version>${spring-boot_version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-starter-web</artifactId>
-				<version>${spring-boot_version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-starter-websocket</artifactId>
-				<version>${spring-boot_version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-devtools</artifactId>
-				<version>${spring-boot_version}</version>
 				<scope>runtime</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-starter-data-jpa</artifactId>
-				<version>${spring-boot_version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-autoconfigure</artifactId>
-				<version>${spring-boot_version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-starter-test</artifactId>
-				<version>${spring-boot_version}</version>
-				<scope>test</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-starter-actuator</artifactId>
-				<version>${spring-boot_version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-starter-security</artifactId>
-				<version>${spring-boot_version}</version>
 			</dependency>
-			<!-- 发送邮件. -->
 			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-starter-mail</artifactId>
-				<version>${spring-boot_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-test</artifactId>
+				<scope>test</scope>
 			</dependency>
 			<dependency>
 				<groupId>junit</groupId>
@@ -281,11 +269,6 @@
 				<groupId>com.bizzan.wallet</groupId>
 				<artifactId>eth</artifactId>
 				<version>1.2</version>
-			</dependency>
-			<dependency>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-starter-test</artifactId>
-				<version>3.4.7</version>
 			</dependency>
 
 		</dependencies>

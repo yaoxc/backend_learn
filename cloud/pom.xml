@@ -1,39 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cloud（Eureka）模块：改回继承 bitrade-parent，与全项目统一 Spring Boot 2.7 + Spring Cloud 2021。
+  原因：根 POM 已升级，无需 cloud 单独 parent，版本由根 POM 与 spring-cloud-dependencies BOM 统一管理。
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.bizzan.bitrade</groupId>
-    <artifactId>cloud</artifactId>
-    <version>1.0</version>
-    <packaging>jar</packaging>
-    <description>Eureka 注册中心（Spring Boot 2.7 + Spring Cloud 2021，独立升级，直接启动）</description>
-
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.18</version>
-        <relativePath/>
+        <artifactId>bitrade-parent</artifactId>
+        <groupId>com.bizzan.bitrade</groupId>
+        <version>1.0</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
-
-    <properties>
-        <java.version>1.8</java.version>
-        <spring-cloud.version>2021.0.8</spring-cloud.version>
-    </properties>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+    <artifactId>cloud</artifactId>
+    <packaging>jar</packaging>
+    <description>Eureka 注册中心（与父 POM 统一 Spring Boot 2.7 + Spring Cloud 2021）</description>
 
     <dependencies>
+        <!-- Eureka Server：Spring Cloud 2021 中 artifact 名为 netflix-eureka-server，版本由 BOM 管理 -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>

@@ -39,9 +39,10 @@
 		</plugins>
 	</build>
 	<dependencies>
+		<!-- 升级说明：Spring Cloud 2021 中 Eureka 客户端改为 spring-cloud-starter-netflix-eureka-client（原 spring-cloud-starter-eureka） -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-eureka</artifactId>
+			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
 		</dependency>
 		<!-- ES -->
 		<dependency>

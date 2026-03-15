@@ -19,7 +19,8 @@
     <properties>
         <project-version>1.2</project-version>
         <commons-lang3.version>3.4</commons-lang3.version>
-        <spring-cloud.version>Edgware.RELEASE</spring-cloud.version>
+        <!-- 与根 POM 统一：Spring Cloud 2021.0.8 与 Boot 2.7 配套（原 Edgware.RELEASE） -->
+		<spring-cloud.version>2021.0.8</spring-cloud.version>
         <jackson.version>2.12.1</jackson.version>
     </properties>
     <dependencyManagement>
