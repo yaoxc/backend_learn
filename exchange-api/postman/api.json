@@ -1,0 +1,271 @@
+{
+    "info": {
+      "name": "exchange-api",
+      "_postman_id": "e9c5b6c4-0000-0000-0000-exchange-api",
+      "description": "本地环境（dev）下的 exchange-api 下单 / 撤单 / 查询接口集合。\n基础地址：http://127.0.0.1:6003/exchange",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "下单-普通用户 /order/add",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded",
+              "type": "text"
+            }
+          ],
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/add",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "add"]
+          },
+          "body": {
+            "mode": "urlencoded",
+            "urlencoded": [
+              {
+                "key": "direction",
+                "value": "BUY",
+                "description": "BUY 或 SELL（ExchangeOrderDirection）",
+                "type": "text"
+              },
+              {
+                "key": "symbol",
+                "value": "BTC/USDT",
+                "description": "交易对，例如 BTC/USDT",
+                "type": "text"
+              },
+              {
+                "key": "price",
+                "value": "30000",
+                "description": "限价价格；市价单可填 0 或忽略（由后端处理）",
+                "type": "text"
+              },
+              {
+                "key": "amount",
+                "value": "0.001",
+                "description": "数量或成交额，取决于方向和订单类型",
+                "type": "text"
+              },
+              {
+                "key": "type",
+                "value": "LIMIT_PRICE",
+                "description": "LIMIT_PRICE 或 MARKET_PRICE（ExchangeOrderType）",
+                "type": "text"
+              }
+            ]
+          },
+          "description": "需要登录态 Session（SESSION_MEMBER），用于真实用户下单。"
+        }
+      },
+      {
+        "name": "下单-机器人Mock /order/mockaddydhdnskd",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded",
+              "type": "text"
+            }
+          ],
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/mockaddydhdnskd",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "mockaddydhdnskd"]
+          },
+          "body": {
+            "mode": "urlencoded",
+            "urlencoded": [
+              {
+                "key": "uid",
+                "value": "1",
+                "description": "机器人用户ID，只允许 1 或 10001",
+                "type": "text"
+              },
+              {
+                "key": "sign",
+                "value": "987654321asdf",
+                "description": "固定签名",
+                "type": "text"
+              },
+              {
+                "key": "direction",
+                "value": "BUY",
+                "description": "BUY 或 SELL",
+                "type": "text"
+              },
+              {
+                "key": "symbol",
+                "value": "BTC/USDT",
+                "type": "text"
+              },
+              {
+                "key": "price",
+                "value": "30000",
+                "type": "text"
+              },
+              {
+                "key": "amount",
+                "value": "0.001",
+                "type": "text"
+              },
+              {
+                "key": "type",
+                "value": "LIMIT_PRICE",
+                "type": "text"
+              }
+            ]
+          },
+          "description": "无需 Session，用于行情机器人 mock 下单，走 OrderOutbox + Kafka 流程。"
+        }
+      },
+      {
+        "name": "撤单-普通用户 /order/cancel/{orderId}",
+        "request": {
+          "method": "POST",
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/cancel/{{orderId}}",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "cancel", "{{orderId}}"]
+          },
+          "description": "需要登录态 Session，orderId 为下单返回的订单号。"
+        }
+      },
+      {
+        "name": "撤单-机器人Mock /order/mockcancelydhdnskd",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded",
+              "type": "text"
+            }
+          ],
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/mockcancelydhdnskd",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "mockcancelydhdnskd"]
+          },
+          "body": {
+            "mode": "urlencoded",
+            "urlencoded": [
+              {
+                "key": "uid",
+                "value": "1",
+                "description": "机器人用户ID，只允许 1 或 10001",
+                "type": "text"
+              },
+              {
+                "key": "sign",
+                "value": "987654321asdf",
+                "description": "固定签名",
+                "type": "text"
+              },
+              {
+                "key": "orderId",
+                "value": "{{orderId}}",
+                "description": "要撤销的订单号",
+                "type": "text"
+              }
+            ]
+          },
+          "description": "机器人撤单接口，内部仍走 outbox + Kafka 流程。"
+        }
+      },
+      {
+        "name": "当前委托-用户 /order/current",
+        "request": {
+          "method": "GET",
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/current?symbol=BTC/USDT&pageNo=1&pageSize=10",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "current"],
+            "query": [
+              { "key": "symbol", "value": "BTC/USDT" },
+              { "key": "pageNo", "value": "1" },
+              { "key": "pageSize", "value": "10" }
+            ]
+          },
+          "description": "需要 Session（当前登录用户）的当前委托列表。"
+        }
+      },
+      {
+        "name": "当前委托-机器人Mock /order/mockcurrentydhdnskd",
+        "request": {
+          "method": "GET",
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/mockcurrentydhdnskd?uid=1&sign=987654321asdf&symbol=BTC/USDT&pageNo=1&pageSize=10",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "mockcurrentydhdnskd"],
+            "query": [
+              { "key": "uid", "value": "1" },
+              { "key": "sign", "value": "987654321asdf" },
+              { "key": "symbol", "value": "BTC/USDT" },
+              { "key": "pageNo", "value": "1" },
+              { "key": "pageSize", "value": "10" }
+            ]
+          },
+          "description": "机器人专用，查询指定 uid 当前挂单。"
+        }
+      },
+      {
+        "name": "历史委托 /order/history",
+        "request": {
+          "method": "GET",
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/history?symbol=BTC/USDT&pageNo=1&pageSize=10",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "history"],
+            "query": [
+              { "key": "symbol", "value": "BTC/USDT" },
+              { "key": "pageNo", "value": "1" },
+              { "key": "pageSize", "value": "10" }
+            ]
+          },
+          "description": "需要 Session（当前登录用户）的历史委托列表。"
+        }
+      },
+      {
+        "name": "下单时间限制 /order/time_limit",
+        "request": {
+          "method": "GET",
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/time_limit",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "time_limit"]
+          },
+          "description": "返回 USER_ADD_EXCHANGE_ORDER_TIME_LIMIT_EXPIRE_TIME，用于前端限流。"
+        }
+      }
+    ],
+    "variable": [
+      {
+        "key": "orderId",
+        "value": "REPLACE_WITH_ORDER_ID",
+        "type": "string"
+      }
+    ]
+  }
