@@ -98,44 +98,7 @@
             <version>1.4.0</version>
         </dependency>
 	</dependencies>
-	<profiles>
-		<profile>
-			<id>dev</id>
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
-			<build>
-				<resources>
-					<resource>
-						<directory>src/main/resources/dev</directory>
-					</resource>
-				</resources>
-			</build>
-			<!--<properties> <project.profile>application</project.profile> </properties> -->
-		</profile>
-		<profile>
-			<id>test</id>
-			<build>
-				<resources>
-					<resource>
-						<directory>src/main/resources/test</directory>
-					</resource>
-				</resources>
-			</build>
-			<!--<properties> <project.profile>application</project.profile> </properties> -->
-		</profile>
-		<profile>
-			<id>prod</id>
-			<!--<properties> <project.profile>application-prod</project.profile> </properties> -->
-			<build>
-				<resources>
-					<resource>
-						<directory>src/main/resources/prod</directory>
-					</resource>
-				</resources>
-			</build>
-		</profile>
-	</profiles>
+	<!-- 修改说明：不再用 Maven profile 替换 resources，改用 Spring Boot 多环境约定（application.properties + application-{profile}.properties），见 README-配置约定.md -->
 	<build>
 		<finalName>market</finalName>
 		<plugins>

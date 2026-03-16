@@ -34,6 +34,17 @@
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
         </dependency>
+        <!-- 修改说明：relay 使用 dev 数据源配置，需 MySQL 驱动；core 的 mysql 可能未传递到 run classpath，显式声明与 exchange-api 一致 -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+        </dependency>
+        <!-- 修改说明：core 内 SmsProviderConfig/DiyiSMSProvider 依赖 dom4j，与 exchange/exchange-api 一致显式引入 -->
+        <dependency>
+            <groupId>org.dom4j</groupId>
+            <artifactId>dom4j</artifactId>
+            <version>2.1.4</version>
+        </dependency>
 
         <dependency>
             <groupId>com.bizzan.bitrade</groupId>
@@ -45,54 +56,21 @@
             <artifactId>exchange-core</artifactId>
             <version>1.0</version>
         </dependency>
-
+        <!-- 修改说明：core 的 SystemConfig 依赖 com.sparkframework.sql.DB，spark-core 为 system 作用域不传递，exchange-relay 启动需该 jar，与 exchange/ucenter-api 一致 -->
+        <dependency>
+            <groupId>com.sparkframework</groupId>
+            <artifactId>spark-core</artifactId>
+            <version>2.6.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/../core/lib/spark-core-2.6.0.jar</systemPath>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
     </dependencies>
 
-    <profiles>
-        <profile>
-            <id>dev</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <build>
-                <resources>
-                    <resource>
-                        <directory>src/main/resources/dev</directory>
-                    </resource>
-                </resources>
-            </build>
-        </profile>
-        <profile>
-            <id>test</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <build>
-                <resources>
-                    <resource>
-                        <directory>src/main/resources/test</directory>
-                    </resource>
-                </resources>
-            </build>
-        </profile>
-        <profile>
-            <id>prod</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <build>
-                <resources>
-                    <resource>
-                        <directory>src/main/resources/prod</directory>
-                    </resource>
-                </resources>
-            </build>
-        </profile>
-    </profiles>
+    <!-- 修改说明：不再用 Maven profile 替换 resources，改用 Spring Boot 多环境约定（application.properties + application-{profile}.properties），见 README-配置约定.md -->
 
     <build>
         <finalName>exchange-relay</finalName>

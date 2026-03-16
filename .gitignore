@@ -1,4 +1,6 @@
+# 根目录及所有子模块的 Maven 构建输出目录，不纳入版本库
 /target/
+**/target/
 /.idea/
 /sql/data/
 # 修改说明：避免将运行时日志提交并推送，超过 GitHub 100MB 限制会导致 push 被拒
