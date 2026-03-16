@@ -44,7 +44,6 @@ public class OrderUpdateJob {
         coinList.forEach(coin->{
             if(coin.getMaxTradingTime() > 0){
                 List<ExchangeOrder> orders =  orderService.findOvertimeOrder(coin.getSymbol(), coin.getMaxTradingTime());
-                logger.info("交易对: {} --- 超出maxTradingTime的订单数量: {}", coin.getSymbol(), orders.size());
                 orders.forEach(order -> {
                     logger.info("交易对: {} --- 超出maxTradingTime的 orderId: {} --- time: {}", coin.getSymbol(), order.getOrderId(), order.getTime());
                     // 【改动】超时撤单消息发送到对外入口 topic，由 exchange-relay 中转到内部撮合 topic。

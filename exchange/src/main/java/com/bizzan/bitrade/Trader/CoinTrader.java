@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -68,6 +69,20 @@ public class CoinTrader {
     private TradePlate sellTradePlate;
     private boolean tradingHalt = false;
     private boolean ready = false;
+
+    // ===================== 幂等防重（撮合入口） =====================
+    /**
+     * 已接收订单集合（按 orderId 去重）。
+     *
+     * 设计目标：
+     * - Kafka / exchange-relay / Outbox 等链路都按“至少一次”设计，某一笔订单消息可能被重复投递到 topic `exchange-order`；
+     * - 为避免同一笔订单被重复写入订单簿、重复参与撮合，这里在单进程内对 orderId 做一次幂等判断；
+     * - 仅对「正常撮合路径」生效（replayMode=false 时），回放 WAL 恢复订单簿时不使用该集合，避免挡住历史日志。
+     *
+     * 注意：
+     * - 这是单进程内的防重，跨进程/跨实例的幂等仍需依赖下游（如成交结果以 messageId/orderId 幂等落库）。
+     */
+    private final Set<String> seenOrderIds = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** 方案 A：注入后撮合结果经队列+WAL 异步发送；未注入则同步发 exchange-trade / exchange-order-completed */
     private MatchResultPublisher matchResultPublisher;
@@ -164,12 +179,34 @@ public class CoinTrader {
      * 单笔订单撮合入口：校验 → 选对手盘 → 市价/限价分支 → 撮合后未成交部分挂单；结果经 flushMatchResult 发出。
      */
     public void trade(ExchangeOrder exchangeOrder) throws ParseException {
-        // 1. 暂停交易时不撮合，避免运维维护时产生新成交
-        if(tradingHalt) {
-            return ;
+        // 0. 回放模式下仅用于恢复订单簿，不做幂等校验、不输出撮合结果（flushMatchResult 内已判断 replayMode）
+        if (replayMode) {
+            // 复用正常撮合逻辑恢复队列结构，但不写入 seenOrderIds，避免影响重启后的正常幂等判断
+            internalTrade(exchangeOrder, false);
+            return;
         }
+        // 1. 暂停交易时不撮合，避免运维维护时产生新成交
+        if (tradingHalt) {
+            return;
+        }
+        // 1.5 幂等防重：同一进程内，同一个 orderId 只允许进入撮合逻辑一次。
+        //      seenOrderIds.add(...) 返回 false 表示之前已经处理过该订单，本次认为是重复消息直接丢弃。
+        if (exchangeOrder.getOrderId() != null && !seenOrderIds.add(exchangeOrder.getOrderId())) {
+            logger.info("duplicate order ignored in trader, symbol={}, orderId={}", symbol, exchangeOrder.getOrderId());
+            return;
+        }
+        internalTrade(exchangeOrder, true);
+    }
+
+    /**
+     * 实际撮合实现，将原 trade(ExchangeOrder) 中的逻辑抽出，供正常路径与回放路径复用。
+     *
+     * @param exchangeOrder 当前订单
+     * @param checkSymbol   是否校验 symbol 一致（正常路径需要，回放订单日志时可以默认一致）
+     */
+    private void internalTrade(ExchangeOrder exchangeOrder, boolean checkSymbol) throws ParseException {
         // 2. 本引擎只处理本交易对，避免误把其它 symbol 的订单写进本实例订单簿
-        if(!symbol.equalsIgnoreCase(exchangeOrder.getSymbol())){
+        if (checkSymbol && !symbol.equalsIgnoreCase(exchangeOrder.getSymbol())) {
             logger.info("unsupported symbol,coin={},base={}", exchangeOrder.getCoinSymbol(), exchangeOrder.getBaseSymbol());
             return ;
         }

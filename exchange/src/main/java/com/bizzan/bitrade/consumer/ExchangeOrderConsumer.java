@@ -34,20 +34,23 @@ public class ExchangeOrderConsumer {
             if(order == null){
                 return ;
             }
+
+            // 订单消息可能会被多次投递，所以这里需要做幂等，保证同一条订单，只进一次撮合引擎的队列
             CoinTrader trader = traderFactory.getTrader(order.getSymbol());
             // 如果当前币种交易暂停会自动取消订单
             // halt: 暂停 ready: 完成
             if (trader.isTradingHalt() || !trader.getReady()) {
                 // 撮合器未准备完成，撤回当前等待的订单
+                log.error("撮合器未准备完成，撤回当前等待的订单: orderId: {} --- halt: {} --- ready: {}", order.getOrderId(), trader.isTradingHalt(), trader.getReady());
                 kafkaTemplate.send("exchange-order-cancel-success", JSON.toJSONString(order));
             } else {
+                log.info("撮合器准备完成，开始撮合订单: {}", order.getOrderId());
                 try {
                     long startTick = System.currentTimeMillis();
                     trader.trade(order);
                     log.info("complete trade,{}ms used!", System.currentTimeMillis() - startTick);
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    log.info("====交易出错，退回订单===",e);
+                    log.error("交易出错 error: {}，退回订单: {}, ", e.getMessage(), order.getOrderId());
                     kafkaTemplate.send("exchange-order-cancel-success", JSON.toJSONString(order));
                 }
             }
