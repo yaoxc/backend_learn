@@ -38,6 +38,15 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
+		<!-- aqmd-netty HawkNettyConfiguration 依赖 EhCacheCacheManager，需 cache + ehcache -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>net.sf.ehcache</groupId>
+			<artifactId>ehcache</artifactId>
+		</dependency>
 		<!-- 升级说明：Ribbon 改为 LoadBalancer（原 spring-cloud-starter-ribbon，含 netty 等 exclusions 已不再需要） -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
@@ -46,6 +55,25 @@
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>druid</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.mashape.unirest</groupId>
+			<artifactId>unirest-java</artifactId>
+			<version>1.4.9</version>
+		</dependency>
+		<!-- core 内 SmsProviderConfig/DiyiSMSProvider 依赖 dom4j，与 clearing 一致 -->
+		<dependency>
+			<groupId>org.dom4j</groupId>
+			<artifactId>dom4j</artifactId>
+			<version>2.1.4</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
@@ -66,6 +94,14 @@
 			<groupId>com.bizzan.bitrade</groupId>
 			<artifactId>core</artifactId>
 			<version>1.0</version>
+		</dependency>
+		<!-- core 的 SystemConfig 依赖 com.sparkframework.sql.DB，spark-core 为 system 作用域不传递，与 clearing 一致 -->
+		<dependency>
+			<groupId>com.sparkframework</groupId>
+			<artifactId>spark-core</artifactId>
+			<version>2.6.0</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/../core/lib/spark-core-2.6.0.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>io.reactivex</groupId>
@@ -96,7 +132,23 @@
             <groupId>org.apache.shiro</groupId>
             <artifactId>shiro-quartz</artifactId>
             <version>1.4.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.opensymphony.quartz</groupId>
+                    <artifactId>quartz</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
+		<!-- Spring 5.3 需 Quartz 2.x（getListenerManager），与 shiro-quartz 排除的 opensymphony 1.x 冲突，故显式引入 -->
+		<dependency>
+			<groupId>org.quartz-scheduler</groupId>
+			<artifactId>quartz</artifactId>
+		</dependency>
+		<!-- core 依赖 Shiro，需 shiro-spring 提供 LifecycleBeanPostProcessor，否则运行时 NoClassDefFoundError -->
+		<dependency>
+			<groupId>org.apache.shiro</groupId>
+			<artifactId>shiro-spring</artifactId>
+		</dependency>
 	</dependencies>
 	<!-- 修改说明：不再用 Maven profile 替换 resources，改用 Spring Boot 多环境约定（application.properties + application-{profile}.properties），见 README-配置约定.md -->
 	<build>
