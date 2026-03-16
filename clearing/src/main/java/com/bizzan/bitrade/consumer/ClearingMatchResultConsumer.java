@@ -27,7 +27,7 @@ public class ClearingMatchResultConsumer {
     @Autowired
     private ClearingService clearingService;
 
-    @KafkaListener(topics = "exchange-match-result", containerFactory = "kafkaListenerContainerFactory", group = "market-clearing-group")
+    @KafkaListener(topics = "exchange-match-result", containerFactory = "kafkaListenerContainerFactory", groupId = "market-clearing-group")
     public void handleMatchResult(List<ConsumerRecord<String, String>> records) {
         for (ConsumerRecord<String, String> record : records) {
             String value = record.value();
