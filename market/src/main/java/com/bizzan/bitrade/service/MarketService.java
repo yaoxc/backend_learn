@@ -1,6 +1,7 @@
 package com.bizzan.bitrade.service;
 
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -12,10 +13,11 @@ import com.bizzan.bitrade.entity.ExchangeTrade;
 import com.bizzan.bitrade.entity.KLine;
 
 import java.math.BigDecimal;
-import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 
 @Service
+@Slf4j
 public class MarketService {
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -24,7 +26,18 @@ public class MarketService {
         Sort sort = Sort.by(Sort.Order.desc("time"));
         Query query = new Query().with(sort).limit(1000);
 
-        return mongoTemplate.find(query,KLine.class,"exchange_kline_"+symbol+"_"+peroid);
+        // 【改动】初始化阶段加载 K 线数据时增加 MongoDB 查询容错。
+        // 【目的】当 MongoDB 未启动或连接异常时，mongoTemplate.find 会抛出 MongoTimeoutException /
+        //        DataAccessResourceFailureException 等，之前会直接导致 Application run failed，
+        //        进而让 market 服务在启动过程中退出。这里捕获异常，仅打印 warn 日志并返回空列表，
+        //        允许应用继续启动，待 MongoDB 恢复后由后续行情推送正常写回数据。
+        try {
+            return mongoTemplate.find(query,KLine.class,"exchange_kline_"+symbol+"_"+peroid);
+        } catch (Exception e) {
+            log.warn("从 MongoDB 加载 K 线初始化数据失败，symbol={} period={}，可能是 MongoDB 未启动或连接异常，将返回空列表继续启动。原因: {}",
+                    symbol, peroid, e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     public List<KLine> findAllKLine(String symbol,long fromTime,long toTime,String period){

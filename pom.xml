@@ -57,9 +57,10 @@
 		<commons-logging_version>1.1.3</commons-logging_version>
 		<commons-collections_version>3.2</commons-collections_version>
 		<!-- extension -->
-		<lombok_version>1.18.36</lombok_version>
+		<!-- 1.18.38 兼容 JDK 17+，避免 JDK 21+ 上 TypeTag/Unsafe 导致的编译错误 -->
+		<lombok_version>1.18.38</lombok_version>
 		<fastjson_version>1.2.31</fastjson_version>
-		<kafka_version>0.10.0.0</kafka_version>
+		<!-- Kafka 由 Spring Boot 2.7 统一管理，不再使用 kafka_version -->
 		<!-- Log libs -->
 		<slf4j_version>1.7.7</slf4j_version>
 		<jcl_version>1.1</jcl_version>
@@ -71,6 +72,24 @@
 		<wallet_version>1.2</wallet_version>
 		<!-- Dubbo 2.7.x 与 Spring Boot 2.x 配套（根 POM 中 dependencyManagement 引用，需显式定义版本） -->
 		<dubbo_version>2.7.15</dubbo_version>
+		<!-- 中间件统一版本（与 Spring Boot 2.7 兼容的业界主流版本） -->
+		<dom4j_version>2.1.4</dom4j_version>
+		<unirest_version>1.4.9</unirest_version>
+		<okhttp_version>4.9.3</okhttp_version>
+		<web3j_version>4.9.3</web3j_version>
+		<jsonrpc4j_version>1.5.3</jsonrpc4j_version>
+		<aliyun_oss_version>2.8.1</aliyun_oss_version>
+		<querydsl_version>4.1.3</querydsl_version>
+		<javax_inject_version>1</javax_inject_version>
+		<easypoi_version>3.0.3</easypoi_version>
+		<shiro_version>1.4.0</shiro_version>
+		<commons_httpclient_version>3.1</commons_httpclient_version>
+		<jxl_version>2.6.12</jxl_version>
+		<elasticsearch_version>7.17.15</elasticsearch_version>
+		<org_json_version>20230227</org_json_version>
+		<commons_io_version>2.11.0</commons_io_version>
+		<rxjava_version>1.3.8</rxjava_version>
+		<protobuf_version>3.21.12</protobuf_version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -189,7 +208,22 @@
 			<dependency>
 				<groupId>org.apache.shiro</groupId>
 				<artifactId>shiro-spring</artifactId>
-				<version>1.4.0</version>
+				<version>${shiro_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.shiro</groupId>
+				<artifactId>shiro-ehcache</artifactId>
+				<version>${shiro_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.shiro</groupId>
+				<artifactId>shiro-core</artifactId>
+				<version>${shiro_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.shiro</groupId>
+				<artifactId>shiro-quartz</artifactId>
+				<version>${shiro_version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.pac4j</groupId>
@@ -201,12 +235,144 @@
 				<artifactId>buji-pac4j</artifactId>
 				<version>3.0.0</version>
 			</dependency>
-			<!-- Jackson 版本由 Spring Boot 父 POM 2.7 统一管理（2.13.x）；此处不再覆盖为 2.9.1，否则会导致 ToStringSerializerBase 等类缺失、与 jackson-datatype-jsr310 不兼容 -->
+			<!-- 中间件统一管理：以下版本与 Spring Boot 2.7 兼容，子模块引用时不得再写 version，由根 POM 继承 -->
 			<dependency>
-	        <groupId>org.apache.shiro</groupId>
-	            <artifactId>shiro-quartz</artifactId>
-	            <version>1.3.2</version>
-	        </dependency>
+				<groupId>org.dom4j</groupId>
+				<artifactId>dom4j</artifactId>
+				<version>${dom4j_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.mashape.unirest</groupId>
+				<artifactId>unirest-java</artifactId>
+				<version>${unirest_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.squareup.okhttp3</groupId>
+				<artifactId>okhttp</artifactId>
+				<version>${okhttp_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.web3j</groupId>
+				<artifactId>core</artifactId>
+				<version>${web3j_version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>com.squareup.okhttp3</groupId>
+						<artifactId>okhttp</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>com.github.briandilley.jsonrpc4j</groupId>
+				<artifactId>jsonrpc4j</artifactId>
+				<version>${jsonrpc4j_version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>com.fasterxml.jackson.core</groupId>
+						<artifactId>jackson-core</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>com.fasterxml.jackson.core</groupId>
+						<artifactId>jackson-databind</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>com.fasterxml.jackson.core</groupId>
+						<artifactId>jackson-annotations</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>com.aliyun.oss</groupId>
+				<artifactId>aliyun-sdk-oss</artifactId>
+				<version>${aliyun_oss_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.querydsl</groupId>
+				<artifactId>querydsl-apt</artifactId>
+				<version>${querydsl_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.querydsl</groupId>
+				<artifactId>querydsl-jpa</artifactId>
+				<version>${querydsl_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>javax.inject</groupId>
+				<artifactId>javax.inject</artifactId>
+				<version>${javax_inject_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>cn.afterturn</groupId>
+				<artifactId>easypoi-base</artifactId>
+				<version>${easypoi_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>cn.afterturn</groupId>
+				<artifactId>easypoi-web</artifactId>
+				<version>${easypoi_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>cn.afterturn</groupId>
+				<artifactId>easypoi-annotation</artifactId>
+				<version>${easypoi_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-httpclient</groupId>
+				<artifactId>commons-httpclient</artifactId>
+				<version>${commons_httpclient_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>net.sourceforge.jexcelapi</groupId>
+				<artifactId>jxl</artifactId>
+				<version>${jxl_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.elasticsearch</groupId>
+				<artifactId>elasticsearch</artifactId>
+				<version>${elasticsearch_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.elasticsearch.client</groupId>
+				<artifactId>transport</artifactId>
+				<version>${elasticsearch_version}</version>
+			</dependency>
+			<!-- ES 7.x 低级别 REST 客户端：RestClient/RestClientBuilder/Request 等，core 中 ESClient 使用 -->
+			<dependency>
+				<groupId>org.elasticsearch.client</groupId>
+				<artifactId>elasticsearch-rest-client</artifactId>
+				<version>${elasticsearch_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.json</groupId>
+				<artifactId>json</artifactId>
+				<version>${org_json_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-io</groupId>
+				<artifactId>commons-io</artifactId>
+				<version>${commons_io_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>io.reactivex</groupId>
+				<artifactId>rxjava</artifactId>
+				<version>${rxjava_version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.protobuf</groupId>
+				<artifactId>protobuf-java</artifactId>
+				<version>${protobuf_version}</version>
+			</dependency>
+			<!-- 内部模块版本统一，子模块可省略 version -->
+			<dependency>
+				<groupId>com.bizzan.bitrade</groupId>
+				<artifactId>core</artifactId>
+				<version>1.0</version>
+			</dependency>
+			<dependency>
+				<groupId>com.bizzan.bitrade</groupId>
+				<artifactId>exchange-core</artifactId>
+				<version>1.0</version>
+			</dependency>
 			<dependency>
 				<groupId>com.bizzan.wallet</groupId>
 				<artifactId>eth</artifactId>
@@ -231,6 +397,29 @@
 	</repositories>
 
 	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.11.0</version>
+					<configuration>
+						<source>1.8</source>
+						<target>1.8</target>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-antrun-plugin</artifactId>
+					<version>3.1.0</version>
+				</plugin>
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>build-helper-maven-plugin</artifactId>
+					<version>3.3.0</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

@@ -67,33 +67,36 @@
 		<dependency>
 			<groupId>com.mashape.unirest</groupId>
 			<artifactId>unirest-java</artifactId>
-			<version>1.4.9</version>
 		</dependency>
-		<!-- core 内 SmsProviderConfig/DiyiSMSProvider 依赖 dom4j，与 clearing 一致 -->
 		<dependency>
 			<groupId>org.dom4j</groupId>
 			<artifactId>dom4j</artifactId>
-			<version>2.1.4</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-java</artifactId>
-			<version>3.6.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- 【改动】显式引入 JUnit 4（测试作用域）。-->
+		<!-- 【目的】MarketAppTest 使用 @RunWith(SpringRunner.class) 等 JUnit4 API，-->
+		<!--       在 Spring Boot 2.7 + starter-test 默认只带 JUnit 5 的情况下，-->
+		<!--       补上 junit:junit 以解决 “程序包 org.junit.runner 不存在 / 找不到符号 RunWith” 的编译错误。-->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>com.bizzan.bitrade</groupId>
 			<artifactId>exchange-core</artifactId>
-			<version>1.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.bizzan.bitrade</groupId>
 			<artifactId>core</artifactId>
-			<version>1.0</version>
 		</dependency>
 		<!-- core 的 SystemConfig 依赖 com.sparkframework.sql.DB，spark-core 为 system 作用域不传递，与 clearing 一致 -->
 		<dependency>
@@ -128,10 +131,9 @@
 			<scope>system</scope>
 			<systemPath>${project.basedir}/lib/aqmd-netty-core-2.0.1.jar</systemPath>
 		</dependency>
-		<dependency>
+        <dependency>
             <groupId>org.apache.shiro</groupId>
             <artifactId>shiro-quartz</artifactId>
-            <version>1.4.0</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.opensymphony.quartz</groupId>

@@ -1,7 +1,6 @@
 package com.bizzan.bc.wallet.service;
 
-import com.mongodb.BasicDBObject;
-import com.mongodb.WriteResult;
+import org.bson.Document;
 import com.bizzan.bc.wallet.entity.Account;
 import com.bizzan.bc.wallet.entity.BalanceSum;
 import com.bizzan.bc.wallet.entity.Coin;
@@ -19,6 +18,11 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * 钱包地址簿等账户的 Mongo 读写。
+ * 升级说明：兼容 Spring Data MongoDB 3.x / 新驱动——Sort 使用 Sort.by(...)、分页使用 PageRequest.of(...)；
+ * 聚合 cursor 使用 org.bson.Document 替代 com.mongodb.BasicDBObject；updateFirst 返回 UpdateResult，此处不依赖返回值故未接收。
+ */
 @Service
 public class AccountService {
     @Autowired
@@ -123,8 +127,7 @@ public class AccountService {
      */
     public long count(){
         Query query = new Query();
-        Sort.Order order = new Sort.Order(Sort.Direction.ASC, "_id");
-        Sort sort = new Sort(order);
+        Sort sort = Sort.by(Sort.Direction.ASC, "_id");
         query.with(sort);
         return mongoTemplate.count(query,getCollectionName());
     }
@@ -136,9 +139,9 @@ public class AccountService {
      * @return
      */
     public List<Account> find(int pageNo,int pageSize){
-        Sort.Order order = new Sort.Order(Sort.Direction.ASC, "_id");
-        Sort sort = new Sort(order);
-        PageRequest page = new PageRequest(pageNo, pageSize, sort);
+        // Spring Data 2.x→3.x：PageRequest 使用 PageRequest.of(...)，构造器已 protected
+        Sort sort = Sort.by(Sort.Direction.ASC, "_id");
+        PageRequest page = PageRequest.of(pageNo, pageSize, sort);
         Query query = new Query();
         query.with(page);
         return mongoTemplate.find(query,Account.class,getCollectionName());
@@ -154,7 +157,7 @@ public class AccountService {
         Query query = new Query();
         Criteria criteria = Criteria.where("balance").gte(minAmount);
         query.addCriteria(criteria);
-        Sort sort = new Sort(new Sort.Order(Sort.Direction.DESC, "balance"));
+        Sort sort = Sort.by(Sort.Direction.DESC, "balance");
         query.with(sort);
         return mongoTemplate.find(query, Account.class, getCollectionName());
     }
@@ -170,7 +173,7 @@ public class AccountService {
         Criteria criteria = Criteria.where("balance").gte(minAmount);
         criteria.andOperator(Criteria.where("gas").gte(gasLimit));
         query.addCriteria(criteria);
-        Sort sort = new Sort(new Sort.Order(Sort.Direction.DESC, "balance"));
+        Sort sort = Sort.by(Sort.Direction.DESC, "balance");
         query.with(sort);
         return mongoTemplate.find(query, Account.class, getCollectionName());
     }
@@ -181,9 +184,10 @@ public class AccountService {
      * @return
      */
     public BigDecimal findBalanceSum() {
+        // 新 MongoDB 驱动：聚合 cursor 选项使用 org.bson.Document，替代已废弃的 com.mongodb.BasicDBObject
         Aggregation aggregation = Aggregation.
                 newAggregation(Aggregation.group("max").sum("balance").as("totalBalance"))
-                .withOptions(Aggregation.newAggregationOptions().cursor(new BasicDBObject()).build());
+                .withOptions(Aggregation.newAggregationOptions().cursor(new Document()).build());
         AggregationResults<BalanceSum> results = mongoTemplate.aggregate(aggregation, getCollectionName(), BalanceSum.class);
         List<BalanceSum> list = results.getMappedResults();
         return list.get(0).getTotalBalance().setScale(8, BigDecimal.ROUND_DOWN);
@@ -202,7 +206,8 @@ public class AccountService {
         query.addCriteria(criteria);
         Update update = new Update();
         update.set("balance", balance.setScale(8, BigDecimal.ROUND_DOWN));
-        WriteResult result = mongoTemplate.updateFirst(query, update, getCollectionName());
+        // Spring Data MongoDB 3.x：updateFirst 返回 UpdateResult，不再返回 com.mongodb.WriteResult
+        mongoTemplate.updateFirst(query, update, getCollectionName());
     }
 
     /**
@@ -217,7 +222,7 @@ public class AccountService {
         query.addCriteria(criteria);
         Update update = new Update();
         update.set("memberWalletBalance", memberWalletBalance.setScale(8, BigDecimal.ROUND_DOWN));
-        WriteResult result = mongoTemplate.updateFirst(query, update, getCollectionName());
+        mongoTemplate.updateFirst(query, update, getCollectionName());
     }
 
     public void updateBalanceAndGas(String address, BigDecimal balance,BigDecimal gas) {
@@ -227,6 +232,6 @@ public class AccountService {
         Update update =  new Update();
         update.set("balance", balance.setScale(8, BigDecimal.ROUND_DOWN));
         update.set("gas",gas);
-        WriteResult result = mongoTemplate.updateFirst(query,update, getCollectionName());
+        mongoTemplate.updateFirst(query, update, getCollectionName());
     }
 }

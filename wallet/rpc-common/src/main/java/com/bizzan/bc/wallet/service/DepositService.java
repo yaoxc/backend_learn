@@ -10,6 +10,10 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
+/**
+ * 充值记录 Mongo 读写。
+ * 升级说明：Spring Data 2.x→3.x，Sort 使用 Sort.by(...)、PageRequest 使用 PageRequest.of(...)。
+ */
 @Service
 public class DepositService {
     @Autowired
@@ -34,9 +38,9 @@ public class DepositService {
 
 
     public Deposit findLatest(){
-        Sort.Order order = new Sort.Order(Sort.Direction.DESC,"blockHeight");
-        Sort sort = new Sort(order);
-        PageRequest page = new PageRequest(0, 1, sort);
+        // Spring Data 2.x→3.x：Sort.by(...)、PageRequest.of(...) 替代已废弃的构造方式
+        Sort sort = Sort.by(Sort.Direction.DESC, "blockHeight");
+        PageRequest page = PageRequest.of(0, 1, sort);
         Query query = new Query();
         query.with(page);
         Deposit result = mongoTemplate.findOne(query,Deposit.class,getCollectionName());

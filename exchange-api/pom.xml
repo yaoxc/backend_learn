@@ -67,13 +67,15 @@
         <dependency>
             <groupId>com.bizzan.bitrade</groupId>
             <artifactId>core</artifactId>
-            <version>1.0</version>
         </dependency>
-        <!-- 升级说明：core 内 DiyiSMSProvider 依赖 dom4j，exchange-api 运行时内省会报 ClassNotFoundException: org.dom4j.DocumentException，故显式引入。 -->
+        <!-- core 中 ESClient 使用 ES 7.x 低级别 REST 客户端，运行时需在 classpath（若 core 从旧版安装则无传递依赖，故此处显式声明） -->
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>elasticsearch-rest-client</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.dom4j</groupId>
             <artifactId>dom4j</artifactId>
-            <version>2.1.4</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -82,7 +84,6 @@
         <dependency>
             <groupId>com.bizzan.bitrade</groupId>
             <artifactId>exchange-core</artifactId>
-            <version>1.0</version>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
@@ -111,10 +112,17 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.7.0</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
+                    <!-- 显式启用 Lombok 注解处理，否则 @Slf4j 等生成的 log 会报找不到符号 -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok_version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>

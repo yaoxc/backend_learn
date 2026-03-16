@@ -27,6 +27,8 @@ SERVICES=(
   "settlement     settlement      6006"
   "fund           fund            6007"
   "wallet-core    wallet/wallet-core     6009"
+  "wallet-eth     wallet/eth      7003"
+  "wallet-eusdt   wallet/erc-eusdt 7004"
 )
 
 usage() {
@@ -125,8 +127,30 @@ stop_service() {
 
 start_all() {
   echo "按依赖顺序启动所有服务..."
+  # 【改动】start all 前先确保 cloud 已启动：未启动则先单独启动，已启动则跳过。
+  # 【目的】如果 cloud 没在 7421 端口监听，优先拉起注册中心；已运行时不重复 kill/重启，避免影响已注册的其他服务。
+  local cloud_line
+  cloud_line="$(find_service "cloud")" || true
+  if [[ -n "$cloud_line" ]]; then
+    set -- $cloud_line
+    local cloud_port="$3"
+    local cloud_pids
+    cloud_pids="$(pids_by_port "${cloud_port}")"
+    if [[ -z "$cloud_pids" ]]; then
+      echo "cloud 未检测到运行实例，先启动 cloud..."
+      start_service "cloud"
+      sleep 3
+    else
+      echo "检测到 cloud 已在端口 ${cloud_port} 运行，start all 时跳过重启 cloud。"
+    fi
+  fi
+
   for line in "${SERVICES[@]}"; do
     set -- $line
+    if [[ "$1" == "cloud" ]]; then
+      # cloud 已在上面处理，这里跳过，避免 kill 并重启
+      continue
+    fi
     start_service "$1"
     sleep 3
   done
@@ -137,6 +161,12 @@ stop_all() {
   for (( idx=${#SERVICES[@]}-1 ; idx>=0 ; idx-- )); do
     line="${SERVICES[$idx]}"
     set -- $line
+    # 【改动】stop all 时不杀 cloud。
+    # 【目的】保留注册中心 cloud 持续运行，避免频繁 stop all 时把 Eureka 一起干掉。
+    if [[ "$1" == "cloud" ]]; then
+      echo "跳过停止 cloud（注册中心保持运行）"
+      continue
+    fi
     stop_service "$1"
   done
 }

@@ -43,18 +43,14 @@
         <dependency>
             <groupId>org.dom4j</groupId>
             <artifactId>dom4j</artifactId>
-            <version>2.1.4</version>
         </dependency>
-
         <dependency>
             <groupId>com.bizzan.bitrade</groupId>
             <artifactId>core</artifactId>
-            <version>1.0</version>
         </dependency>
         <dependency>
             <groupId>com.bizzan.bitrade</groupId>
             <artifactId>exchange-core</artifactId>
-            <version>1.0</version>
         </dependency>
         <!-- 修改说明：core 的 SystemConfig 依赖 com.sparkframework.sql.DB，spark-core 为 system 作用域不传递，exchange-relay 启动需该 jar，与 exchange/ucenter-api 一致 -->
         <dependency>
@@ -78,7 +74,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.7.0</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>

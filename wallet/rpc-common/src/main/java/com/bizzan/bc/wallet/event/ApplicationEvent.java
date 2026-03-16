@@ -52,15 +52,27 @@ public class ApplicationEvent implements ApplicationListener<ContextRefreshedEve
     public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent) {
         if(watcher != null) {
             logger.info("=======Initialize Block Data Watcher=====");
-            WatcherLog watcherLog = watcherLogService.findOne(coin.getName());
-            logger.info("watcherLog:{}",watcherLog);
+            // 【改动】从 MongoDB 读取上次同步高度时加 try-catch。
+            // 【目的】MongoDB 未启动或网络异常时 MongoTemplate.findOne 会抛异常导致应用直接退出(exit code 1)。
+            //        捕获后仅打 warn 日志并降级为使用配置的初始区块高度，保证服务能启动，待 MongoDB 恢复后由 Watcher 正常写回进度。
+            WatcherLog watcherLog = null;
+            try {
+                watcherLog = watcherLogService.findOne(coin.getName());
+            } catch (Exception e) {
+                logger.warn("无法从 MongoDB 读取 WatcherLog（如 MongoDB 未启动或网络异常），将使用配置的初始区块高度: {}", e.getMessage());
+            }
+            logger.info("watcherLog:{}", watcherLog);
             if (watcherLog != null ) {
                 watcher.setCurrentBlockHeight(watcherLog.getLastSyncHeight());
-            } else if(watcherSetting.getInitBlockHeight().equalsIgnoreCase("latest")) {
-                watcher.setCurrentBlockHeight(watcher.getNetworkBlockHeight());
-            }else {
-                Long height = Long.parseLong(watcherSetting.getInitBlockHeight());
-                watcher.setCurrentBlockHeight(height);
+            } else {
+                // 【改动】对 watcherSetting / getInitBlockHeight() 做空值保护，未配置时按 "latest" 处理，避免 NPE 或解析异常。
+                String init = watcherSetting != null && watcherSetting.getInitBlockHeight() != null
+                        ? watcherSetting.getInitBlockHeight() : "latest";
+                if (init.equalsIgnoreCase("latest")) {
+                    watcher.setCurrentBlockHeight(watcher.getNetworkBlockHeight());
+                } else {
+                    watcher.setCurrentBlockHeight(Long.parseLong(init));
+                }
             }
             //初始化参数
             //设置每次同步区块数量

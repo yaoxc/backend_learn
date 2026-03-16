@@ -57,6 +57,11 @@ mvn -pl exchange-api spring-boot:run
 
 # 指定 Spring 环境
 mvn -pl exchange-api spring-boot:run -Dspring-boot.run.profiles=prod
+
+# wallet 子模块在根 pom 中路径为 wallet/xxx，须用路径形式（不能写 wallet-core）
+mvn -pl wallet/wallet-core spring-boot:run
+mvn -pl wallet/eth spring-boot:run
+mvn -pl wallet/erc-eusdt spring-boot:run
 ```
 
 ---

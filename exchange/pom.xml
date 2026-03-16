@@ -38,7 +38,6 @@
         <dependency>
             <groupId>com.bizzan.bitrade</groupId>
             <artifactId>exchange-core</artifactId>
-            <version>1.0</version>
         </dependency>
         <dependency>
             <groupId>com.alibaba</groupId>
@@ -63,13 +62,10 @@
         <dependency>
             <groupId>com.bizzan.bitrade</groupId>
             <artifactId>core</artifactId>
-            <version>1.0</version>
         </dependency>
-        <!-- 修改说明：core 内 SmsProviderConfig/DiyiSMSProvider 依赖 dom4j（接口方法签名含 DocumentException），exchange 启动内省会报 ClassNotFoundException: org.dom4j.DocumentException，与 exchange-api 一致显式引入 -->
         <dependency>
             <groupId>org.dom4j</groupId>
             <artifactId>dom4j</artifactId>
-            <version>2.1.4</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -97,7 +93,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.7.0</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>

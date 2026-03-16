@@ -11,7 +11,9 @@
 	<!--按天生成日志 -->
 	<appender name="logFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-			<FileNamePattern>@logback.path@/wallet/%d{yyyy-MM-dd}/%d{yyyy-MM-dd}.%i.log </FileNamePattern>
+			<!-- 【改动】文件日志统一落在项目根 logs 目录下。 -->
+			<!-- 【目的】与 services.sh 使用的 logs/ 目录保持一致，不再生成单独的 logback/ 目录。 -->
+			<FileNamePattern>logs/wallet/%d{yyyy-MM-dd}/%d{yyyy-MM-dd}.%i.log </FileNamePattern>
 			<maxFileSize>200MB</maxFileSize>
 			<maxHistory>100</maxHistory>
 		</rollingPolicy>
