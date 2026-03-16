@@ -183,51 +183,7 @@
 			<version>2.11.0</version>
 		</dependency>
 	</dependencies>
-	<profiles>
-		<profile>
-			<id>dev</id>
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
-			<build>
-				<resources>
-					<resource>
-						<directory>src/main/resources/dev</directory>
-					</resource>
-				</resources>
-			</build>
-			<!--<properties> <project.profile>application</project.profile> </properties> -->
-		</profile>
-		<!-- 仅 dev 默认激活，避免 test 的空 application.properties 覆盖 dev 配置导致 Eureka 等连不上；需用 test 时显式 -Ptest -->
-		<profile>
-			<id>test</id>
-			<activation>
-				<activeByDefault>false</activeByDefault>
-			</activation>
-			<build>
-				<resources>
-					<resource>
-						<directory>src/main/resources/test</directory>
-					</resource>
-				</resources>
-			</build>
-			<!--<properties> <project.profile>application</project.profile> </properties> -->
-		</profile>
-		<profile>
-			<id>prod</id>
-			<!--<properties> <project.profile>application-prod</project.profile> </properties> -->
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
-			<build>
-				<resources>
-					<resource>
-						<directory>src/main/resources/prod</directory>
-					</resource>
-				</resources>
-			</build>
-		</profile>
-	</profiles>
+	<!-- 修改说明：多环境改用 Spring Boot 约定（application.properties + application-{profile}.properties），不再用 Maven profile 替换 resources，与 exchange-api 一致 -->
 	<build>
 		<finalName>ucenter-api</finalName>
 		<plugins>
