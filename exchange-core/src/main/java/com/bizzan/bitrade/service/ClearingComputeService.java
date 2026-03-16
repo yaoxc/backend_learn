@@ -72,11 +72,15 @@ public class ClearingComputeService {
 
         BigDecimal turnover = order.getDirection() == ExchangeOrderDirection.BUY ? trade.getBuyTurnover() : trade.getSellTurnover();
         BigDecimal fee;
+        // fee 来自 exchange_coin.fee，买单用 成交数量 * 费率，卖单用 成交额 * 费率。
         if (order.getDirection() == ExchangeOrderDirection.BUY) {
             fee = trade.getAmount().multiply(coin.getFee());
         } else {
             fee = turnover.multiply(coin.getFee());
         }
+        
+        // ID为1的用户默认为机器人，此处当订单用户ID为机器人时，不收取手续费
+        // ID为10001的用户默认为超级管理员，此处当订单用户ID为机器人时，不收取手续费
         if (order.getMemberId() != null && (order.getMemberId() == 1L || order.getMemberId() == 10001L)) {
             fee = BigDecimal.ZERO;
         }

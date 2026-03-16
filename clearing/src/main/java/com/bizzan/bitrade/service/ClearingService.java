@@ -46,6 +46,8 @@ public class ClearingService {
             return;
         }
         ClearingResultDTO dto = clearingComputeService.compute(messageId, symbol, ts, trades, completedOrders);
+        log.info("清算服务计算结果: messageId={}, symbol={}, ts={}, trades={}, completedOrders={}", messageId, symbol, ts, trades, completedOrders);
+        log.info("清算服务计算结果: payload={}", JSON.toJSONString(dto));
         String payload = JSON.toJSONString(dto);
         ClearingResult entity = new ClearingResult();
         entity.setMessageId(messageId);
@@ -54,8 +56,16 @@ public class ClearingService {
         entity.setStatus(ClearingResult.Status.PENDING);
         entity.setPayload(payload);
         entity.setCreatedAt(new Date());
+        // 发 Kafka之前入库， Pending状态， 保证幂等
+        // 之后无论 Kafka 成功 / 失败 / 服务宕机，都有一条记录可以被“补发 job”扫描到。
         clearingResultRepository.save(entity);
-
+        /**
+         *  唯一让“完全不入库”的情况，是：
+            在 clearingResultRepository.save(entity) 这一步本身就抛异常（数据库挂了、事务回滚等），
+            此时代码不会执行到 kafkaTemplate.send(...)，也不会有任何清算结果对外可见；
+          这属于“数据库不可用”的大故障，已经超出业务逻辑可控范围。
+         * 
+         */
         try {
             kafkaTemplate.send(clearingResultTopic, messageId, payload).get();
             entity.setStatus(ClearingResult.Status.PUBLISHED);

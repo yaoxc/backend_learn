@@ -1,0 +1,28 @@
+{
+    "messageId": "68d820ef-dc8c-442a-be71-b03586161f33",
+    "orderRefundList": [],
+    "symbol": "BTC/USDT",
+    "tradeClearingList": [
+        {
+            "direction": "BUY",
+            "fee": 0,
+            "incomeAmount": 0.00100000,
+            "incomeSymbol": "BTC",
+            "memberId": 1,
+            "orderId": "E177366278954611",
+            "outcomeAmount": 30.00000000000000,
+            "outcomeSymbol": "USDT"
+        },
+        {
+            "direction": "SELL",
+            "fee": 0,
+            "incomeAmount": 30.00000000000000,
+            "incomeSymbol": "USDT",
+            "memberId": 10001,
+            "orderId": "E177366261413659",
+            "outcomeAmount": 0.00100000,
+            "outcomeSymbol": "BTC"
+        }
+    ],
+    "ts": 1773662789601
+}
