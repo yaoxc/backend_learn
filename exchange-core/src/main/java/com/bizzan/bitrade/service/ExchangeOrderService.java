@@ -101,6 +101,12 @@ public class ExchangeOrderService extends BaseService {
         log.info("add order:{}", order);
         if (order.getDirection() == ExchangeOrderDirection.BUY) {
             MemberWallet wallet = memberWalletService.findByCoinUnitAndMemberId(order.getBaseSymbol(), memberId);
+            // 【改动】增加空钱包防护，避免本地联调/脏数据时出现 NPE。
+            // 【目的】当用户还未开通该币种钱包或数据不完整时，直接返回业务错误，而不是抛 NullPointerException。
+            if (wallet == null) {
+                log.warn("addOrder buy failed, memberId={} baseSymbol={} wallet is null", memberId, order.getBaseSymbol());
+                return MessageResult.error(500, msService.getMessage("NONSUPPORT_COIN") + order.getBaseSymbol());
+            }
             if(wallet.getIsLock().equals(BooleanEnum.IS_TRUE)){
                 return MessageResult.error("钱包已锁定");
             }
@@ -121,6 +127,12 @@ public class ExchangeOrderService extends BaseService {
             }
         } else if (order.getDirection() == ExchangeOrderDirection.SELL) {
             MemberWallet wallet = memberWalletService.findByCoinUnitAndMemberId(order.getCoinSymbol(), memberId);
+            // 【改动】增加空钱包防护，避免本地联调/脏数据时出现 NPE。
+            // 【目的】当用户还未开通该币种钱包或数据不完整时，直接返回业务错误，而不是抛 NullPointerException。
+            if (wallet == null) {
+                log.warn("addOrder sell failed, memberId={} coinSymbol={} wallet is null", memberId, order.getCoinSymbol());
+                return MessageResult.error(500, msService.getMessage("NONSUPPORT_COIN") + order.getCoinSymbol());
+            }
             if(wallet.getIsLock().equals(BooleanEnum.IS_TRUE)){
                 return MessageResult.error("钱包已锁定");
             }
