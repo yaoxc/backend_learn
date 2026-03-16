@@ -1,6 +1,8 @@
 /target/
 /.idea/
 /sql/data/
+# 修改说明：避免将运行时日志提交并推送，超过 GitHub 100MB 限制会导致 push 被拒
+**/logs/
 # Ignore local jar libraries
 *.jar
 !**/lib/README.md
