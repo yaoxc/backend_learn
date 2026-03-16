@@ -23,6 +23,7 @@ public class RetryOrderOutboxJob {
     @Scheduled(fixedDelayString = "${exchange.outbox.retry.interval:30000}")
     public void retryOrderOutbox() {
         int sent = orderOutboxService.retryPending();
+        log.info("本地消息表：定时重试未发送成功的订单/撤单 Kafka 消息 ... 重试数量: {}", sent);
         if (sent > 0) {
             log.info("retry order outbox sent count={}", sent);
         }

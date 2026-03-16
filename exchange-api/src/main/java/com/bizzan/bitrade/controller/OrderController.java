@@ -315,6 +315,9 @@ public class OrderController {
                                     BigDecimal amount, ExchangeOrderType type) {
         //int expireTime = SysConstant.USER_ADD_EXCHANGE_ORDER_TIME_LIMIT_EXPIRE_TIME;
         //ValueOperations valueOperations =  redisTemplate.opsForValue();
+        // 【改动】模拟下单入口增加关键参数日志。
+        // 【目的】方便模拟撮合测试时快速还原请求参数，排查订单为何被撮合/清算侧直接取消等问题。
+        log.info("mock add order request, uid={} symbol={} direction={} type={} price={} amount={}", uid, symbol, direction, type, price, amount);
         if(direction == null || type == null){
             return MessageResult.error(500,msService.getMessage("ILLEGAL_ARGUMENT"));
         }
@@ -353,6 +356,15 @@ public class OrderController {
         if(exchangeCoin.getEnable() != 1 || exchangeCoin.getExchangeable() != 1) {
         	return MessageResult.error(500, msService.getMessage("COIN_FORBIDDEN"));
         }
+        // 【改动】记录命中的交易对及关键交易参数，用于对照 exchange_coin 配置与撮合行为。
+        // 【目的】排查价格/数量是否落在交易对配置范围内，以及活动模式(publishType)等对订单的影响。
+        log.info("mock add order exchangeCoin symbol={} publishType={} minSellPrice={} maxBuyPrice={} minVolume={} maxVolume={}",
+                exchangeCoin.getSymbol(),
+                exchangeCoin.getPublishType(),
+                exchangeCoin.getMinSellPrice(),
+                exchangeCoin.getMaxBuyPrice(),
+                exchangeCoin.getMinVolume(),
+                exchangeCoin.getMaxVolume());
 
         //获取基准币
         String baseCoin = exchangeCoin.getBaseSymbol();
@@ -527,13 +539,24 @@ public class OrderController {
         //限价买入单时amount为用户设置的总成交额
         order.setAmount(amount);
 
+        // 【改动】在写本地消息表和发送 Kafka 前记录订单概要。
+        // 【目的】让日志中能快速通过 orderId / symbol / direction 等定位到这次模拟下单，以及它是否成功写入 outbox。
+        log.info("mock add order ready, orderId={} uid={} symbol={} direction={} type={} price={} amount={}",
+                order.getOrderId(), uid, order.getSymbol(), order.getDirection(), order.getType(), order.getPrice(), order.getAmount());
+
         MessageResult mr = orderOutboxService.addOrderAndSaveOutbox(uid, order, orderIngressTopic);
         if (mr.getCode() != 0) {
+            log.warn("mock add order failed before outbox send, orderId={} uid={} code={} msg={}",
+                    order.getOrderId(), uid, mr.getCode(), mr.getMessage());
             return MessageResult.error(500, "提交订单失败:" + mr.getMessage());
         }
         log.info(">>>>>>>>>>订单提交完成>>>>>>>>>>");
         if (mr.getData() != null && mr.getData() instanceof Long) {
-            orderOutboxService.trySendById((Long) mr.getData());
+            Long outboxId = (Long) mr.getData();
+            // 【改动】增加 outbox 发送结果日志。
+            // 【目的】区分“只写入 outbox 成功但 Kafka 发送失败”和“Kafka 已确认发送成功”的情况。
+            boolean sent = orderOutboxService.trySendById(outboxId);
+            log.info("mock add order outbox send result, orderId={} outboxId={} sent={}", order.getOrderId(), outboxId, sent);
         }
         MessageResult result = MessageResult.success("success");
         result.setData(order.getOrderId());

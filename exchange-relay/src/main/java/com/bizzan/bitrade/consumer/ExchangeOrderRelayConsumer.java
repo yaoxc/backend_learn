@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -40,23 +41,32 @@ public class ExchangeOrderRelayConsumer {
     private KafkaTemplate<String, String> kafkaTemplate;
 
     @KafkaListener(topics = "${relay.order.ingress-topic:exchange-order-ingress}", containerFactory = "kafkaListenerContainerFactory")
-    public void onOrderIngress(List<ConsumerRecord<String, String>> records) {
+    public void onOrderIngress(List<ConsumerRecord<String, String>> records, Acknowledgment ack) {
+        log.info("数据中转服务 ----- Kafka消费者 ----- onOrderIngress records: {}", records);
         for (ConsumerRecord<String, String> record : records) {
             relayOne(record, orderIngressTopic, internalOrderTopic);
+        }
+        // 【改动】使用手动提交模式，只有当本批次消息全部成功中转后才提交 offset。
+        // 【目的】避免在转发失败时仍然提交位点，保证至少处理一次语义，便于问题排查和重试。
+        if (ack != null) {
+            ack.acknowledge();
         }
     }
 
     @KafkaListener(topics = "${relay.order.cancel-ingress-topic:exchange-order-cancel-ingress}", containerFactory = "kafkaListenerContainerFactory")
-    public void onCancelIngress(List<ConsumerRecord<String, String>> records) {
+    public void onCancelIngress(List<ConsumerRecord<String, String>> records, Acknowledgment ack) {
+        log.info("数据中转服务 ----- Kafka消费者 ----- onCancelIngress records: {}", records);
         for (ConsumerRecord<String, String> record : records) {
             relayOne(record, cancelIngressTopic, internalCancelTopic);
+        }
+        if (ack != null) {
+            ack.acknowledge();
         }
     }
 
     private void relayOne(ConsumerRecord<String, String> record, String fromTopic, String toTopic) {
         String raw = record.value();
         if (raw == null || raw.trim().isEmpty()) {
-            log.warn("relay skip empty message, fromTopic={}, partition={}, offset={}", record.topic(), record.partition(), record.offset());
             return;
         }
 
