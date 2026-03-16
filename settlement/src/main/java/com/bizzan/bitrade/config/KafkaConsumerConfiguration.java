@@ -11,6 +11,7 @@ import org.springframework.kafka.config.KafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
+import org.springframework.kafka.listener.ContainerProperties;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -60,6 +61,8 @@ public class KafkaConsumerConfiguration {
         factory.setConsumerFactory(consumerFactory());
         factory.setConcurrency(concurrency);
         factory.getContainerProperties().setPollTimeout(1500);
+        // 使用批量监听 + 手动提交 offset，配合 @KafkaListener 入参 Acknowledgment。
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         factory.setBatchListener(true);
         return factory;
     }

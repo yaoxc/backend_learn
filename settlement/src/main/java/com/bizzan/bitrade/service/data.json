@@ -1,0 +1,35 @@
+{
+    "instructions": [
+        {
+            "amount": 0.00100000,
+            "memberId": 1,
+            "orderId": "E177366360795129",
+            "symbol": "BTC",
+            "type": "INCOME"
+        },
+        {
+            "amount": -30.00000000000000,
+            "memberId": 1,
+            "orderId": "E177366360795129",
+            "symbol": "USDT",
+            "type": "OUTCOME"
+        },
+        {
+            "amount": 30.00000000000000,
+            "memberId": 10001,
+            "orderId": "E177366361289114",
+            "symbol": "USDT",
+            "type": "INCOME"
+        },
+        {
+            "amount": -0.00100000,
+            "memberId": 10001,
+            "orderId": "E177366361289114",
+            "symbol": "BTC",
+            "type": "OUTCOME"
+        }
+    ],
+    "messageId": "a154ec1e-6a35-42e4-ac7a-ef9fe8fd5671",
+    "symbol": "BTC/USDT",
+    "ts": 1773663612934
+}

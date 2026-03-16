@@ -116,6 +116,7 @@ public class SettlementService {
         }
         // 结算产出的资金指令 DTO: {messageId, symbol, ts, instructions}
         FundInstructionDTO fundDto = clearingToFundInstructions(clearing);
+        log.info("结算服务产生资金指令 fundDto:{}", JSON.toJSONString(fundDto));
         String payload = JSON.toJSONString(fundDto);
         SettlementResult entity = new SettlementResult();
         entity.setMessageId(clearingMessageId);
