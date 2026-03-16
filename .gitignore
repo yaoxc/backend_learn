@@ -3,6 +3,8 @@
 /sql/data/
 # 修改说明：避免将运行时日志提交并推送，超过 GitHub 100MB 限制会导致 push 被拒
 **/logs/
+# 修改说明：exchange 模块运行时产生的 WAL 等数据目录，不纳入版本库
+exchange/data/
 # Ignore local jar libraries
 *.jar
 !**/lib/README.md
