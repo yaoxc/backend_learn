@@ -70,7 +70,7 @@ public class OrderOutboxService {
      * @return true 发送成功并已更新状态，false 发送失败（状态不变或置 FAILED）
      */
     public boolean trySendById(Long outboxId) {
-        OrderKafkaOutbox outbox = outboxRepository.findOne(outboxId);
+        OrderKafkaOutbox outbox = outboxRepository.findById(outboxId).orElse(null);
         if (outbox == null || outbox.getStatus() == OrderKafkaOutbox.Status.SENT) {
             return true;
         }
