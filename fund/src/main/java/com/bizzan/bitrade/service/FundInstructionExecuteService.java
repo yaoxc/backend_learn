@@ -1,9 +1,11 @@
 package com.bizzan.bitrade.service;
 
 import com.alibaba.fastjson.JSON;
+import com.bizzan.bitrade.dao.FundInstructionExecutionRepository;
 import com.bizzan.bitrade.dao.ProcessedFundInstructionRepository;
 import com.bizzan.bitrade.constant.TransactionType;
 import com.bizzan.bitrade.dto.FundInstructionDTO;
+import com.bizzan.bitrade.entity.FundInstructionExecution;
 import com.bizzan.bitrade.entity.MemberWallet;
 import com.bizzan.bitrade.entity.ProcessedFundInstruction;
 import com.bizzan.bitrade.entity.MemberTransaction;
@@ -39,6 +41,9 @@ public class FundInstructionExecuteService {
     @Autowired
     private MemberTransactionService memberTransactionService;
 
+    @Autowired
+    private FundInstructionExecutionRepository fundInstructionExecutionRepository;
+
     @Value("${settlement.platform.memberId:0}")
     private Long platformMemberId;
 
@@ -67,6 +72,20 @@ public class FundInstructionExecuteService {
             record.setCreatedAt(new Date());
             processedFundInstructionRepository.save(record);
         }
+
+        // 资金指令执行结果凭证（用于对账/追溯），幂等按 messageId
+        FundInstructionExecution exec = fundInstructionExecutionRepository.findByMessageId(messageId).orElse(null);
+        if (exec == null) {
+            exec = new FundInstructionExecution();
+            exec.setMessageId(messageId);
+            exec.setStatus(FundInstructionExecution.Status.PENDING);
+            exec.setPayload(record.getPayload() != null ? record.getPayload() : payload);
+            exec.setCreatedAt(new Date());
+            fundInstructionExecutionRepository.save(exec);
+        } else {
+            exec.setRetryCount(exec.getRetryCount() == null ? 1 : exec.getRetryCount() + 1);
+            fundInstructionExecutionRepository.save(exec);
+        }
         // 以库中 payload 为准，保证重试时使用的是同一份指令数据
         String payloadToUse = record.getPayload() != null ? record.getPayload() : payload;
         FundInstructionDTO dto = JSON.parseObject(payloadToUse, FundInstructionDTO.class);
@@ -75,6 +94,9 @@ public class FundInstructionExecuteService {
             log.warn("fund instruction parse null, messageId={}", messageId);
             record.setStatus(ProcessedFundInstruction.Status.FAILED);
             processedFundInstructionRepository.save(record);
+            exec.setStatus(FundInstructionExecution.Status.FAILED);
+            exec.setErrorMsg("fund instruction parse null");
+            fundInstructionExecutionRepository.save(exec);
             return;
         }
         String refType = (dto.getRefType() != null && !dto.getRefType().isEmpty()) ? dto.getRefType() : MemberTransaction.REF_TYPE_ORDER;
@@ -87,11 +109,19 @@ public class FundInstructionExecuteService {
             record.setStatus(ProcessedFundInstruction.Status.PROCESSED);
             record.setProcessedAt(new Date());
             processedFundInstructionRepository.save(record);
+
+            exec.setStatus(FundInstructionExecution.Status.PROCESSED);
+            exec.setProcessedAt(new Date());
+            exec.setErrorMsg(null);
+            fundInstructionExecutionRepository.save(exec);
         } catch (Exception e) {
             log.error("fund instruction execute failed, messageId={}", messageId, e);
             // 标记为 FAILED，交由重试任务后续处理
             record.setStatus(ProcessedFundInstruction.Status.FAILED);
             processedFundInstructionRepository.save(record);
+            exec.setStatus(FundInstructionExecution.Status.FAILED);
+            exec.setErrorMsg(e.getMessage());
+            fundInstructionExecutionRepository.save(exec);
             throw e;
         }
     }
@@ -179,9 +209,6 @@ public class FundInstructionExecuteService {
         }
         switch (refType) {
             case MemberTransaction.REF_TYPE_ORDER:
-                if (instructionType == FundInstructionDTO.InstructionType.OUTCOME) {
-                    return null;
-                }
                 return TransactionType.EXCHANGE;
             case MemberTransaction.REF_TYPE_DEPOSIT:
                 return instructionType == FundInstructionDTO.InstructionType.INCOME ? TransactionType.RECHARGE : null;

@@ -3,8 +3,10 @@ package com.bizzan.bitrade.consumer;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.bizzan.bitrade.dao.MatchResultEventRepository;
 import com.bizzan.bitrade.entity.ExchangeOrder;
 import com.bizzan.bitrade.entity.ExchangeTrade;
+import com.bizzan.bitrade.entity.MatchResultEvent;
 import com.bizzan.bitrade.service.ClearingService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +17,7 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -28,6 +31,9 @@ public class ClearingMatchResultConsumer {
 
     @Autowired
     private ClearingService clearingService;
+
+    @Autowired
+    private MatchResultEventRepository matchResultEventRepository;
 
     /**
      * 使用手动提交 offset 的方式消费 exchange-match-result。
@@ -65,6 +71,20 @@ public class ClearingMatchResultConsumer {
                     if (symbol == null && !trades.isEmpty()) {
                         symbol = trades.get(0).getSymbol();
                     }
+
+                    // 先落库撮合结果凭证（用于对账/追溯），幂等按 messageId
+                    if (messageId != null && !messageId.isEmpty() && !matchResultEventRepository.existsByMessageId(messageId)) {
+                        MatchResultEvent event = new MatchResultEvent();
+                        event.setMessageId(messageId);
+                        event.setSymbol(symbol);
+                        event.setTs(ts);
+                        event.setTradesCount(trades != null ? trades.size() : 0);
+                        event.setCompletedOrdersCount(completedOrders != null ? completedOrders.size() : 0);
+                        event.setPayload(value);
+                        event.setCreatedAt(new Date());
+                        matchResultEventRepository.save(event);
+                    }
+
                     clearingService.processAndPublish(messageId, symbol, ts, trades, completedOrders);
                 } catch (Exception e) {
                     // 单条异常打印后抛出，让整个 batch 不提交 offset，后续重试；幂等由业务保证。

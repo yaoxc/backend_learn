@@ -1,9 +1,11 @@
 package com.bizzan.bitrade.service;
 
 import com.alibaba.fastjson.JSON;
+import com.bizzan.bitrade.dao.FundInstructionRecordRepository;
 import com.bizzan.bitrade.dao.SettlementResultRepository;
 import com.bizzan.bitrade.dto.ClearingResultDTO;
 import com.bizzan.bitrade.dto.FundInstructionDTO;
+import com.bizzan.bitrade.entity.FundInstructionRecord;
 import com.bizzan.bitrade.entity.MemberTransaction;
 import com.bizzan.bitrade.entity.SettlementResult;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 结算服务：消费清算结果，生成资金指令，先落库再发 Kafka；发送失败由定时任务重试。
@@ -27,6 +30,8 @@ public class SettlementService {
 
     @Autowired
     private SettlementResultRepository settlementResultRepository;
+    @Autowired
+    private FundInstructionRecordRepository fundInstructionRecordRepository;
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
@@ -105,8 +110,13 @@ public class SettlementService {
     /**
      * 幂等：已存在该 messageId 的结算记录则直接返回；否则解析清算 payload → 生成资金指令 → 落库 PENDING → 发 Kafka。
      */
+    @SuppressWarnings("null")
     public void processAndPublish(String clearingMessageId, String clearingPayload) {
         if (clearingMessageId == null || clearingMessageId.isEmpty()) {
+            return;
+        }
+        final String messageId = Objects.requireNonNull(clearingMessageId);
+        if (fundInstructionTopic == null || fundInstructionTopic.isEmpty()) {
             return;
         }
         if (settlementResultRepository.existsByMessageId(clearingMessageId)) {
@@ -121,6 +131,22 @@ public class SettlementService {
         FundInstructionDTO fundDto = clearingToFundInstructions(clearing);
         log.info("结算服务产生资金指令 fundDto:{}", JSON.toJSONString(fundDto));
         String payload = JSON.toJSONString(fundDto);
+        if (payload == null || payload.isEmpty()) {
+            return;
+        }
+
+        // 资金指令“凭证表”：先落库 PENDING，保证后续对账能找到“应执行”的指令集合（按 messageId 幂等）
+        if (!fundInstructionRecordRepository.existsByMessageId(messageId)) {
+            FundInstructionRecord instructionRecord = new FundInstructionRecord();
+            instructionRecord.setMessageId(messageId);
+            instructionRecord.setSymbol(clearing.getSymbol());
+            instructionRecord.setTs(clearing.getTs() != null ? clearing.getTs() : System.currentTimeMillis());
+            instructionRecord.setStatus(FundInstructionRecord.Status.PENDING);
+            instructionRecord.setPayload(payload);
+            instructionRecord.setCreatedAt(new Date());
+            fundInstructionRecordRepository.save(instructionRecord);
+        }
+
         SettlementResult entity = new SettlementResult();
         entity.setMessageId(clearingMessageId);
         entity.setSymbol(clearing.getSymbol());
@@ -131,14 +157,25 @@ public class SettlementService {
         settlementResultRepository.save(entity);
 
         try {
-            kafkaTemplate.send(fundInstructionTopic, clearingMessageId, payload).get();
+            kafkaTemplate.send(fundInstructionTopic, messageId, payload).get();
             entity.setStatus(SettlementResult.Status.PUBLISHED);
             entity.setPublishedAt(new Date());
             settlementResultRepository.save(entity);
+
+            fundInstructionRecordRepository.findByMessageId(Objects.requireNonNull(messageId)).ifPresent(r -> {
+                r.setStatus(FundInstructionRecord.Status.PUBLISHED);
+                r.setPublishedAt(new Date());
+                fundInstructionRecordRepository.save(r);
+            });
         } catch (Exception e) {
             log.warn("settlement fund instruction kafka send failed, messageId={}, will retry by job", clearingMessageId, e);
             entity.setStatus(SettlementResult.Status.FAILED);
             settlementResultRepository.save(entity);
+
+            fundInstructionRecordRepository.findByMessageId(Objects.requireNonNull(messageId)).ifPresent(r -> {
+                r.setStatus(FundInstructionRecord.Status.FAILED);
+                fundInstructionRecordRepository.save(r);
+            });
         }
     }
 

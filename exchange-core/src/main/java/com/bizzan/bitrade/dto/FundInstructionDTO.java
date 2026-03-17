@@ -30,7 +30,7 @@ public class FundInstructionDTO implements Serializable {
     /**
      * 业务类型：ORDER/DEPOSIT/WITHDRAW/SWEEP/REBALANCE，与 MemberTransaction.refType 一致。
      * 为空时资金服务按 ORDER 处理，兼容旧 payload。
-     */
+     */ 
     private String refType;
     /**
      * 业务主键：订单号/存款单号/提现单号/归集批次ID/再平衡批次ID 等，与 MemberTransaction.refId 一致。

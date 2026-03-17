@@ -46,7 +46,6 @@ public class ClearingService {
             return;
         }
         ClearingResultDTO dto = clearingComputeService.compute(messageId, symbol, ts, trades, completedOrders);
-        log.info("清算服务计算结果: messageId={}, symbol={}, ts={}, trades={}, completedOrders={}", messageId, symbol, ts, trades, completedOrders);
         log.info("清算服务计算结果: payload={}", JSON.toJSONString(dto));
         String payload = JSON.toJSONString(dto);
         ClearingResult entity = new ClearingResult();
