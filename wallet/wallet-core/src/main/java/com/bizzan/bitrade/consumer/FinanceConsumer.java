@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -42,36 +43,43 @@ public class FinanceConsumer {
      *
      * @param record
      */
-    @KafkaListener(topics = {"deposit"})
-    public void handleDeposit(ConsumerRecord<String, String> record) {
+    @KafkaListener(topics = {"deposit"}, containerFactory = "kafkaListenerContainerFactory")
+    public void handleDeposit(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
         logger.info("topic={},key={},value={}", record.topic(), record.key(), record.value());
-        if (StringUtils.isEmpty(record.value())) {
-            return;
-        }
-        JSONObject json = JSON.parseObject(record.value());
-        if (json == null) {
-            return;
-        }
-        BigDecimal amount = json.getBigDecimal("amount");
-        String txid = json.getString("txid");
-        String address = json.getString("address");
-        Coin coin = coinService.findOne(record.key());
-
-        logger.info("coin={}", coin);
-
-        if (coin.getAccountType() == 1) {
-            Long memoId = json.getLong("userId"); // 备注Memo
-            Long userId = memoId - 345678; // 注意，此处与前端memo必须保持一致
-            Member m = memberService.findOne(userId);
-            if (m != null && walletService.findDepositByTxid(txid) == null) {
-                MessageResult mr = walletService.recharge2(userId, coin, address, amount, txid);
-                logger.info("wallet recharge result:{}", mr);
+        try {
+            if (StringUtils.isEmpty(record.value())) {
+                return;
             }
-        } else {
-            if (coin != null && walletService.findDeposit(address, txid) == null) {
-                MessageResult mr = walletService.recharge(coin, address, amount, txid);
-                logger.info("wallet recharge result:{}", mr);
+            JSONObject json = JSON.parseObject(record.value());
+            if (json == null) {
+                return;
             }
+            BigDecimal amount = json.getBigDecimal("amount");
+            String txid = json.getString("txid");
+            String address = json.getString("address");
+            Coin coin = coinService.findOne(record.key());
+
+            logger.info("coin={}", coin);
+
+            if (coin.getAccountType() == 1) {
+                Long memoId = json.getLong("userId"); // 备注Memo
+                Long userId = memoId - 345678; // 注意，此处与前端memo必须保持一致
+                Member m = memberService.findOne(userId);
+                if (m != null && walletService.findDepositByTxid(txid) == null) {
+                    MessageResult mr = walletService.recharge2(userId, coin, address, amount, txid);
+                    logger.info("wallet recharge result:{}", mr);
+                }
+            } else {
+                if (coin != null && walletService.findDeposit(address, txid) == null) {
+                    MessageResult mr = walletService.recharge(coin, address, amount, txid);
+                    logger.info("wallet recharge result:{}", mr);
+                }
+            }
+            if (ack != null) {
+                ack.acknowledge();
+            }
+        } catch (Exception e) {
+            throw e;
         }
     }
 
@@ -80,8 +88,8 @@ public class FinanceConsumer {
      *
      * @param record
      */
-    @KafkaListener(topics = {"withdraw"})
-    public void handleWithdraw(ConsumerRecord<String, String> record) {
+    @KafkaListener(topics = {"withdraw"}, containerFactory = "kafkaListenerContainerFactory")
+    public void handleWithdraw(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
         logger.info("topic={},key={},value={}", record.topic(), record.key(), record.value());
         if (StringUtils.isEmpty(record.value())) {
             return;
@@ -101,7 +109,7 @@ public class FinanceConsumer {
                         MessageResult.class, json.getString("address"), json.getBigDecimal("arriveAmount"), minerFee);
                 logger.info("=========================rpc 结束================================");
                 logger.info("result = {}", result);
-                if (result.getCode() == 0 && result.getData() != null) {
+                if (result != null && result.getCode() == 0 && result.getData() != null) {
                     logger.info("====================== 处理成功,data为txid更新业务 ==================================");
                     //处理成功,data为txid，更新业务订单
                     String txid = (String) result.getData();
@@ -112,12 +120,15 @@ public class FinanceConsumer {
                     withdrawRecordService.autoWithdrawFail(withdrawId);
                 }
             }
+            if (ack != null) {
+                ack.acknowledge();
+            }
         } catch (Exception e) {
-            e.printStackTrace();
             logger.error("auto withdraw failed,error={}", e.getMessage());
             logger.info("====================== 自动转账失败，转为人工处理 ==================================");
 //            自动转账失败，转为人工处理
             withdrawRecordService.autoWithdrawFail(withdrawId);
+            throw e;
         }
     }
 
@@ -127,8 +138,8 @@ public class FinanceConsumer {
      *
      * @param record
      */
-    @KafkaListener(topics = {"withdraw-notify"})
-    public void withdrawNotify(ConsumerRecord<String, String> record) {
+    @KafkaListener(topics = {"withdraw-notify"}, containerFactory = "kafkaListenerContainerFactory")
+    public void withdrawNotify(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
         logger.info("topic={},accessKey={},value={}", record.topic(), record.key(), record.value());
         if (StringUtils.isEmpty(record.value())) {
             return;
@@ -147,6 +158,9 @@ public class FinanceConsumer {
             withdrawRecordService.save(withdrawRecord);
         } else if (status == 1) {
             withdrawRecordService.withdrawSuccess(withdrawId, txid);
+        }
+        if (ack != null) {
+            ack.acknowledge();
         }
     }
 }

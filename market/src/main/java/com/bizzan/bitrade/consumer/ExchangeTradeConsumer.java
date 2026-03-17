@@ -1,11 +1,6 @@
 package com.bizzan.bitrade.consumer;
 
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -13,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
@@ -62,8 +58,6 @@ public class ExchangeTradeConsumer {
 	/** true=走清算→结算→资金流水线（仅落订单状态，资金由资金服务执行）；false=沿用原逻辑（直接改钱包） */
 	@Value("${match.result.use.fund.pipeline:true}")
 	private boolean useFundPipeline;
-	private ExecutorService executor = new ThreadPoolExecutor(30, 100, 0L, TimeUnit.MILLISECONDS,
-			new LinkedBlockingQueue<Runnable>(1024), new ThreadPoolExecutor.AbortPolicy());
 	@Autowired
 	private ExchangePushJob pushJob;
 
@@ -75,10 +69,18 @@ public class ExchangeTradeConsumer {
 	@KafkaListener(topics = "exchange-trade", 
 	containerFactory = "kafkaListenerContainerFactory",
 	groupId = "market-handle-exchange-trade-group")
-	public void handleTrade(List<ConsumerRecord<String, String>> records) {
-		for (int i = 0; i < records.size(); i++) {
-			ConsumerRecord<String, String> record = records.get(i);
-			executor.submit(new HandleTradeThread(record));
+	public void handleTrade(List<ConsumerRecord<String, String>> records, Acknowledgment ack) throws Exception {
+		try {
+			for (int i = 0; i < records.size(); i++) {
+				ConsumerRecord<String, String> record = records.get(i);
+				// 为了保证“处理成功后再提交 offset”，这里改为同步处理；否则异步线程未完成就提交会丢数据
+				new HandleTradeThread(record).run();
+			}
+			if (ack != null) {
+				ack.acknowledge();
+			}
+		} catch (Exception e) {
+			throw e;
 		}
 	}
 
@@ -96,7 +98,7 @@ public class ExchangeTradeConsumer {
 	@KafkaListener(topics = "exchange-match-result", 
 	containerFactory = "kafkaListenerContainerFactory",
 	groupId = "market-handle-match-result-group")
-	public void handleMatchResult(List<ConsumerRecord<String, String>> records) {
+	public void handleMatchResult(List<ConsumerRecord<String, String>> records, Acknowledgment ack) throws Exception {
 		try {
 			for (ConsumerRecord<String, String> record : records) {
 				// 1. 解析 MatchResult：messageId, symbol, ts, trades[], completedOrders[]
@@ -112,15 +114,10 @@ public class ExchangeTradeConsumer {
 				// 2. 幂等落库（订单状态 + 成交明细）。true=仅订单不碰资金，false=原逻辑含钱包/流水/返佣/退冻结
 				String messageId = obj.getString("messageId");
 				boolean processed;
-				try {
-					if (useFundPipeline) {
-						processed = exchangeOrderService.processMatchResultIdempotentOrderOnly(messageId, trades, completedOrders);
-					} else {
-						processed = exchangeOrderService.processMatchResultIdempotent(messageId, trades, completedOrders, secondReferrerAward);
-					}
-				} catch (Exception ex) {
-					log.error("handleMatchResult processMatchResult error", ex);
-					throw ex;
+				if (useFundPipeline) {
+					processed = exchangeOrderService.processMatchResultIdempotentOrderOnly(messageId, trades, completedOrders);
+				} else {
+					processed = exchangeOrderService.processMatchResultIdempotent(messageId, trades, completedOrders, secondReferrerAward);
 				}
 				if (!processed) {
 					continue; // 已处理过（重复消费），不再推送与清算
@@ -161,8 +158,12 @@ public class ExchangeTradeConsumer {
 					nettyHandler.handleOrder(NettyCommand.PUSH_EXCHANGE_ORDER_COMPLETED, order);
 				}
 			}
+			if (ack != null) {
+				ack.acknowledge();
+			}
 		} catch (Exception e) {
 			log.error("handleMatchResult error", e);
+			throw e;
 		}
 	}
 
@@ -172,7 +173,7 @@ public class ExchangeTradeConsumer {
 	@KafkaListener(topics = "exchange-order-completed", 
 	containerFactory = "kafkaListenerContainerFactory",
 	groupId = "market-handle-exchange-order-completed-group")
-	public void handleOrderCompleted(List<ConsumerRecord<String, String>> records) {
+	public void handleOrderCompleted(List<ConsumerRecord<String, String>> records, Acknowledgment ack) throws Exception {
 		logger.info("接收到exchange-order-completed消息");
 		try {
 			for (int i = 0; i < records.size(); i++) {
@@ -190,8 +191,11 @@ public class ExchangeTradeConsumer {
 					nettyHandler.handleOrder(NettyCommand.PUSH_EXCHANGE_ORDER_COMPLETED, order);
 				}
 			}
+			if (ack != null) {
+				ack.acknowledge();
+			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw e;
 		}
 	}
 
@@ -203,7 +207,7 @@ public class ExchangeTradeConsumer {
 	@KafkaListener(topics = "exchange-trade-mocker", 
 	containerFactory = "kafkaListenerContainerFactory",
 	groupId = "market-handle-exchange-trade-mocker-group")
-	public void handleMockerTrade(List<ConsumerRecord<String, String>> records) {
+	public void handleMockerTrade(List<ConsumerRecord<String, String>> records, Acknowledgment ack) throws Exception {
 		try {
 			for (int i = 0; i < records.size(); i++) {
 				ConsumerRecord<String, String> record = records.get(i);
@@ -217,8 +221,11 @@ public class ExchangeTradeConsumer {
 				}
 				pushJob.addTrades(symbol, trades);
 			}
+			if (ack != null) {
+				ack.acknowledge();
+			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw e;
 		}
 	}
 
@@ -230,7 +237,7 @@ public class ExchangeTradeConsumer {
 	@KafkaListener(topics = "exchange-trade-plate", 
 	containerFactory = "kafkaListenerContainerFactory",
 	groupId = "market-handle-exchange-trade-plate-group")
-	public void handleTradePlate(List<ConsumerRecord<String, String>> records) {
+	public void handleTradePlate(List<ConsumerRecord<String, String>> records, Acknowledgment ack) throws Exception {
 		try {
 			for (int i = 0; i < records.size(); i++) {
 				ConsumerRecord<String, String> record = records.get(i);
@@ -239,8 +246,11 @@ public class ExchangeTradeConsumer {
 				String symbol = plate.getSymbol();
 				pushJob.addPlates(symbol, plate);
 			}
+			if (ack != null) {
+				ack.acknowledge();
+			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw e;
 		}
 	}
 
@@ -252,7 +262,7 @@ public class ExchangeTradeConsumer {
 	@KafkaListener(topics = "exchange-order-cancel-success", 
 	containerFactory = "kafkaListenerContainerFactory",
 	groupId = "market-handle-exchange-order-cancel-success-group")
-	public void handleOrderCanceled(List<ConsumerRecord<String, String>> records) {
+	public void handleOrderCanceled(List<ConsumerRecord<String, String>> records, Acknowledgment ack) throws Exception {
 		try {
 			for (int i = 0; i < records.size(); i++) {
 				ConsumerRecord<String, String> record = records.get(i);
@@ -266,8 +276,11 @@ public class ExchangeTradeConsumer {
 						order);
 				nettyHandler.handleOrder(NettyCommand.PUSH_EXCHANGE_ORDER_CANCELED, order);
 			}
+			if (ack != null) {
+				ack.acknowledge();
+			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw e;
 		}
 	}
 
@@ -304,7 +317,7 @@ public class ExchangeTradeConsumer {
 				}
 				pushJob.addTrades(symbol, trades);
 			} catch (Exception e) {
-				e.printStackTrace();
+				throw new RuntimeException(e);
 			}
 		}
 	}

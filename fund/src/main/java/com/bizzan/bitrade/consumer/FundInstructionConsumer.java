@@ -49,7 +49,7 @@ public class FundInstructionConsumer {
                 }
             }
             if (ack != null) {
-                // ack.acknowledge();
+                ack.acknowledge();
             }
         } catch (Exception e) {
             // 不调用 ack 即表示不提交 offset；交由容器按配置重试。

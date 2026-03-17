@@ -16,25 +16,36 @@ import org.springframework.kafka.listener.ContainerProperties;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * wallet-core Kafka 消费配置：统一关闭自动提交，使用手动 ack 提交 offset。
+ */
 @Configuration
 @EnableKafka
 public class KafkaConsumerConfiguration {
 
     @Value("${spring.kafka.bootstrap-servers}")
     private String servers;
+
     @Value("${spring.kafka.consumer.enable.auto.commit:false}")
     private boolean enableAutoCommit;
-    @Value("${spring.kafka.consumer.session.timeout}")
+
+    @Value("${spring.kafka.consumer.session.timeout:15000}")
     private String sessionTimeout;
-    @Value("${spring.kafka.consumer.auto.commit.interval}")
+
+    @Value("${spring.kafka.consumer.auto.commit.interval:1000}")
     private String autoCommitInterval;
-    @Value("${spring.kafka.consumer.group.id}")
+
+    // 兼容两种写法：group-id / group.id
+    @Value("${spring.kafka.consumer.group-id:${spring.kafka.consumer.group.id:default-group}}")
     private String groupId;
-    @Value("${spring.kafka.consumer.auto.offset.reset}")
+
+    @Value("${spring.kafka.consumer.auto.offset.reset:earliest}")
     private String autoOffsetReset;
-    @Value("${spring.kafka.consumer.concurrency}")
+
+    @Value("${spring.kafka.consumer.concurrency:3}")
     private int concurrency;
-    @Value("${spring.kafka.consumer.maxPollRecordsConfig}")
+
+    @Value("${spring.kafka.consumer.maxPollRecordsConfig:50}")
     private int maxPollRecordsConfig;
 
     public Map<String, Object> consumerConfigs() {
@@ -43,8 +54,8 @@ public class KafkaConsumerConfiguration {
         propsMap.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, enableAutoCommit);
         propsMap.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, autoCommitInterval);
         propsMap.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, sessionTimeout);
-        propsMap.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        propsMap.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        propsMap.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        propsMap.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         propsMap.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         propsMap.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, autoOffsetReset);
         propsMap.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, maxPollRecordsConfig);
@@ -61,9 +72,9 @@ public class KafkaConsumerConfiguration {
         factory.setConsumerFactory(consumerFactory());
         factory.setConcurrency(concurrency);
         factory.getContainerProperties().setPollTimeout(1500);
-        // 使用批量监听 + 手动提交 offset，配合监听方法入参 Acknowledgment。
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
-        factory.setBatchListener(true);
+        // wallet 侧多为单条消息处理，默认不开启 batch listener
+        factory.setBatchListener(false);
         return factory;
     }
 }

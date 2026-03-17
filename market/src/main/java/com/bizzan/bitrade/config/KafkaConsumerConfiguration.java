@@ -13,6 +13,7 @@ import org.springframework.kafka.config.KafkaListenerContainerFactory; // 监听
 import org.springframework.kafka.core.ConsumerFactory; // 消费者工厂接口
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory; // 默认消费者工厂实现
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer; // 并发消息监听器容器
+import org.springframework.kafka.listener.ContainerProperties;
 
 @Configuration // 告诉 Spring 这是一个配置类，启动时加载
 @EnableKafka   // 启用 Kafka 注解（@KafkaListener、@KafkaHandler 等）
@@ -22,7 +23,7 @@ public class KafkaConsumerConfiguration {
     @Value("${spring.kafka.bootstrap-servers}")
     private String servers; // Kafka broker 地址，如 192.168.1.101:9092
 
-    @Value("${spring.kafka.consumer.enable.auto.commit}")
+    @Value("${spring.kafka.consumer.enable.auto.commit:false}")
     private boolean enableAutoCommit; // 是否自动提交 offset，一般 false 由业务手动提交
 
     @Value("${spring.kafka.consumer.session.timeout}")
@@ -94,6 +95,8 @@ public class KafkaConsumerConfiguration {
         factory.getContainerProperties().setPollTimeout(1500);
         // 开启批处理：一次把 max.poll.records 条记录当成 List 传入业务方法
         factory.setBatchListener(true);
+        // 统一手动提交 offset：业务处理完整个 batch 后显式 ack；异常不 ack 触发重试
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         return factory;
     }
 }

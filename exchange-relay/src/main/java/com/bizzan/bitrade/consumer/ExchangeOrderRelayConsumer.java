@@ -11,6 +11,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.TimeUnit;
 import java.util.List;
 
 /**
@@ -62,16 +63,11 @@ public class ExchangeOrderRelayConsumer {
      *   没有必要共享位点；groupId 在 Kafka 中是“同一批 topic 的消费伸缩单元”，而不是模块级 namespace。
      */
     @KafkaListener(topics = "${relay.order.ingress-topic:exchange-order-ingress}", containerFactory = "kafkaListenerContainerFactory", groupId = "market-relay-group-order-debug")
-    public void onOrderIngress(List<ConsumerRecord<String, String>> records, Acknowledgment ack) {
+    public void onOrderIngress(List<ConsumerRecord<String, String>> records, Acknowledgment ack) throws Exception {
         for (ConsumerRecord<String, String> record : records) {
             relayOne(record, orderIngressTopic, internalOrderTopic);
         }
-        // 使用手动提交模式，只有当本批次消息全部成功中转后才提交 offset。
-        // 避免在转发失败时仍然提交位点，保证至少处理一次语义，便于问题排查和重试。
         if (ack != null) {
-            // 根据当前调试/联调用途选择是否开启手动 ack：
-            // - 正式环境：建议打开 ack.acknowledge()，确保“转发成功后再提交位点”；
-            // - 调试环境：可以先注释掉，避免因消费异常导致同一批数据被反复重放干扰排查。
             ack.acknowledge();
         }
     }
@@ -82,17 +78,16 @@ public class ExchangeOrderRelayConsumer {
      * - 与下单入口分组，可以独立扩缩容和灰度发布，也不会因为某一类消息异常影响另一类的消费进度。
      */
     @KafkaListener(topics = "${relay.order.cancel-ingress-topic:exchange-order-cancel-ingress}", containerFactory = "kafkaListenerContainerFactory", groupId = "market-relay-group-cancel-debug")
-    public void onCancelIngress(List<ConsumerRecord<String, String>> records, Acknowledgment ack) {
+    public void onCancelIngress(List<ConsumerRecord<String, String>> records, Acknowledgment ack) throws Exception {
         for (ConsumerRecord<String, String> record : records) {
             relayOne(record, cancelIngressTopic, internalCancelTopic);
         }
-        // 撤单入口这里默认开启手动 ack，只有当本批次撤单全部成功中转后才提交 offset。
         if (ack != null) {
             ack.acknowledge();
         }
     }
 
-    private void relayOne(ConsumerRecord<String, String> record, String fromTopic, String toTopic) {
+    private void relayOne(ConsumerRecord<String, String> record, String fromTopic, String toTopic) throws Exception {
         String raw = record.value();
         if (raw == null || raw.trim().isEmpty()) {
             return;
@@ -113,9 +108,13 @@ public class ExchangeOrderRelayConsumer {
 
         // 统一分区键：同 symbol 的订单进入同一分区，撮合端同分区顺序消费更稳定
         String key = order.getSymbol().trim();
+        if (toTopic == null || toTopic.trim().isEmpty() || key.isEmpty()) {
+            return;
+        }
 
-        // 可能会投送多次，所以消费端要做幂等
-        kafkaTemplate.send(toTopic, key, raw);
+        // 可能会投送多次，所以消费端要做幂等。
+        // 这里阻塞等待 send 成功，避免“转发失败但 offset 已提交”。
+        kafkaTemplate.send(toTopic, key, raw).get(30, TimeUnit.SECONDS);
 
         if (log.isDebugEnabled()) {
             log.debug("relayed message, {} -> {}, key={}, orderId={}", fromTopic, toTopic, key, order.getOrderId());

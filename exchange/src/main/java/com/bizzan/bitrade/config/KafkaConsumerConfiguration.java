@@ -14,7 +14,6 @@ import org.springframework.kafka.config.KafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.listener.ContainerProperties;
 
 @Configuration
@@ -23,7 +22,7 @@ public class KafkaConsumerConfiguration {
 
 	@Value("${spring.kafka.bootstrap-servers}")
 	private String servers;
-	@Value("${spring.kafka.consumer.enable.auto.commit}")
+	@Value("${spring.kafka.consumer.enable.auto.commit:false}")
 	private boolean enableAutoCommit;
 	@Value("${spring.kafka.consumer.session.timeout}")
 	private String sessionTimeout;
