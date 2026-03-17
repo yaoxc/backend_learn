@@ -1,13 +1,16 @@
 package com.bizzan.bitrade.job;
 
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.fastjson.JSON;
@@ -54,6 +57,12 @@ public class CoinProcessorJob {
     @Autowired
     CoinExchangeRate exchangeRate;
     
+    /**
+     * 撮合服务在 Eureka 中的 serviceId（通常为 spring.application.name 的大写形式）。
+     * 默认值 SERVICE-EXCHANGE，避免历史硬编码 SERVICE-EXCHANGE-TRADE 导致找不到实例。
+     */
+    @Value("${market.exchange.service-id:SERVICE-EXCHANGE}")
+    private String exchangeServiceId;
     
     /**
      * 1分钟定时器，每隔1分钟进行一次
@@ -62,10 +71,26 @@ public class CoinProcessorJob {
     public void synchronizeExchangeCenter(){
     	log.info("========CoinProcessorJob========synchronize the exchange coinpairs");
     	// 获取撮合交易中心支持的币种
-    	String serviceName = "SERVICE-EXCHANGE-TRADE";
-        String url = "http://" + serviceName + "/monitor/engines";
-        ResponseEntity<HashMap> resultStr = restTemplate.getForEntity(url, HashMap.class);
-        Map<String, Integer> exchangeCenterCoins = (HashMap<String, Integer>)resultStr.getBody();
+        String url = "http://" + exchangeServiceId + "/monitor/engines";
+        ResponseEntity<Map<String, Integer>> resultStr;
+        try {
+            resultStr = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    HttpEntity.EMPTY,
+                    new ParameterizedTypeReference<Map<String, Integer>>() {}
+            );
+        } catch (RestClientException e) {
+            // Eureka 未发现实例 / 网络异常等：跳过本轮，避免定时任务持续抛异常导致日志刷屏
+            log.warn("========CoinProcessorJob========skip sync, exchange service not available. serviceId={}, url={}",
+                    exchangeServiceId, url, e);
+            return;
+        }
+        Map<String, Integer> exchangeCenterCoins = resultStr.getBody();
+        if (exchangeCenterCoins == null || exchangeCenterCoins.isEmpty()) {
+            log.info("========CoinProcessorJob========exchange engines empty, serviceId={}, url={}", exchangeServiceId, url);
+            return;
+        }
         log.info("========CoinProcessorJob========now exchange support coins:{}", JSON.toJSONString(exchangeCenterCoins));
         Map<String, CoinProcessor> processorMap = processorFactory.getProcessorMap();
 

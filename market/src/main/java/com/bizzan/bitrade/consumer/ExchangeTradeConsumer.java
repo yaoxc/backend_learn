@@ -72,7 +72,9 @@ public class ExchangeTradeConsumer {
 	 *
 	 * @param records
 	 */
-	@KafkaListener(topics = "exchange-trade", containerFactory = "kafkaListenerContainerFactory")
+	@KafkaListener(topics = "exchange-trade", 
+	containerFactory = "kafkaListenerContainerFactory",
+	groupId = "market-handle-exchange-trade-group")
 	public void handleTrade(List<ConsumerRecord<String, String>> records) {
 		for (int i = 0; i < records.size(); i++) {
 			ConsumerRecord<String, String> record = records.get(i);
@@ -91,7 +93,9 @@ public class ExchangeTradeConsumer {
 	 *   <li>清算由独立 clearing 服务监听 exchange-match-result 完成，此处不再触发。</li>
 	 * </ul>
 	 */
-	@KafkaListener(topics = "exchange-match-result", containerFactory = "kafkaListenerContainerFactory")
+	@KafkaListener(topics = "exchange-match-result", 
+	containerFactory = "kafkaListenerContainerFactory",
+	groupId = "market-handle-match-result-group")
 	public void handleMatchResult(List<ConsumerRecord<String, String>> records) {
 		try {
 			for (ConsumerRecord<String, String> record : records) {
@@ -165,7 +169,9 @@ public class ExchangeTradeConsumer {
 	/**
 	 * 处理订单完成（旧路径）。方案 A 下撮合不发此 topic；若与 exchange-match-result 同时有数据，需幂等防重复。
 	 */
-	@KafkaListener(topics = "exchange-order-completed", containerFactory = "kafkaListenerContainerFactory")
+	@KafkaListener(topics = "exchange-order-completed", 
+	containerFactory = "kafkaListenerContainerFactory",
+	groupId = "market-handle-exchange-order-completed-group")
 	public void handleOrderCompleted(List<ConsumerRecord<String, String>> records) {
 		logger.info("接收到exchange-order-completed消息");
 		try {
@@ -194,7 +200,9 @@ public class ExchangeTradeConsumer {
 	 *
 	 * @param records
 	 */
-	@KafkaListener(topics = "exchange-trade-mocker", containerFactory = "kafkaListenerContainerFactory")
+	@KafkaListener(topics = "exchange-trade-mocker", 
+	containerFactory = "kafkaListenerContainerFactory",
+	groupId = "market-handle-exchange-trade-mocker-group")
 	public void handleMockerTrade(List<ConsumerRecord<String, String>> records) {
 		try {
 			for (int i = 0; i < records.size(); i++) {
@@ -219,7 +227,9 @@ public class ExchangeTradeConsumer {
 	 *
 	 * @param records
 	 */
-	@KafkaListener(topics = "exchange-trade-plate", containerFactory = "kafkaListenerContainerFactory")
+	@KafkaListener(topics = "exchange-trade-plate", 
+	containerFactory = "kafkaListenerContainerFactory",
+	groupId = "market-handle-exchange-trade-plate-group")
 	public void handleTradePlate(List<ConsumerRecord<String, String>> records) {
 		try {
 			for (int i = 0; i < records.size(); i++) {
@@ -239,7 +249,9 @@ public class ExchangeTradeConsumer {
 	 *
 	 * @param records
 	 */
-	@KafkaListener(topics = "exchange-order-cancel-success", containerFactory = "kafkaListenerContainerFactory")
+	@KafkaListener(topics = "exchange-order-cancel-success", 
+	containerFactory = "kafkaListenerContainerFactory",
+	groupId = "market-handle-exchange-order-cancel-success-group")
 	public void handleOrderCanceled(List<ConsumerRecord<String, String>> records) {
 		try {
 			for (int i = 0; i < records.size(); i++) {
