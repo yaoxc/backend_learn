@@ -72,7 +72,7 @@ public class ExchangeOrderRelayConsumer {
             // 根据当前调试/联调用途选择是否开启手动 ack：
             // - 正式环境：建议打开 ack.acknowledge()，确保“转发成功后再提交位点”；
             // - 调试环境：可以先注释掉，避免因消费异常导致同一批数据被反复重放干扰排查。
-            // ack.acknowledge();
+            ack.acknowledge();
         }
     }
 
@@ -88,7 +88,7 @@ public class ExchangeOrderRelayConsumer {
         }
         // 撤单入口这里默认开启手动 ack，只有当本批次撤单全部成功中转后才提交 offset。
         if (ack != null) {
-            // ack.acknowledge();
+            ack.acknowledge();
         }
     }
 
