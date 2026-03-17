@@ -31,10 +31,6 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
         <!-- 升级说明：Eureka 客户端改为 netflix-eureka-client（原 spring-cloud-starter-eureka） -->

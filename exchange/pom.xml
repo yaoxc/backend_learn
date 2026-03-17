@@ -67,10 +67,6 @@
             <groupId>org.dom4j</groupId>
             <artifactId>dom4j</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-        </dependency>
         <!-- 修改说明：core 的 SystemConfig 依赖 com.sparkframework.sql.DB，spark-core 在 core 中为 system 作用域不传递，exchange 启动时需该 jar 否则 ClassNotFoundException，与 ucenter-api 一致引用 core/lib -->
         <dependency>
             <groupId>com.sparkframework</groupId>

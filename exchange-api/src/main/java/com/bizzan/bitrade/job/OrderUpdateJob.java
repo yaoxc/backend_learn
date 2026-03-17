@@ -26,14 +26,14 @@ public class OrderUpdateJob {
     private KafkaTemplate<String, String> kafkaTemplate;
     private Logger logger = LoggerFactory.getLogger(OrderUpdateJob.class);
 
-    // 5分钟检查一次超时订单
+    // 1小时检查一次超时订单
     // 【说明】自动取消订单的原因：
     //        交易对（ExchangeCoin）可以配置 maxTradingTime（最大挂单时长，单位秒/分钟，视业务而定），
     //        撮合引擎只负责撮合撮中的部分，不主动清理“长时间无人成交、已超出允许挂单时长”的订单。
     //        这个定时任务会定期扫描所有启用的交易对，找出超出 maxTradingTime 的挂单，
     //        并向 Kafka 主题 exchange-order-cancel 发送撤单指令，让撮合系统或下游根据指令统一取消这些“超时挂单”，
     //        避免订单永久挂在簿上，占用用户额度或影响盘口展示。
-    @Scheduled(fixedRate = 300*1000)
+    @Scheduled(fixedRate = 3600*1000)
     public void autoCancelOrder(){
         logger.info("start autoCancelOrder...");
         List<ExchangeCoin> coinList = coinService.findAllEnabled();

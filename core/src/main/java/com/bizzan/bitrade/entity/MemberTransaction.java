@@ -75,6 +75,11 @@ public class MemberTransaction {
 
     /**
      * 交易类型
+     * 
+     * 这两行的意思是：MemberTransaction.type 这个字段在数据库里按“枚举序号”存储，并且导出 Excel 时把它当作“交易类型”列。
+     * @Excel(...)：来自 EasyPOI，用于 Excel 导出/导入的字段映射。这里表示导出时列名叫“交易类型”，列顺序是第 5 列，列宽 25。
+     * @Enumerated(EnumType.ORDINAL)：JPA 枚举映射方式。表示把 TransactionType 存到数据库时，不存字符串（如 EXCHANGE_FREEZE），而是存整数序号（ordinal）。
+     *     例如存成 17（具体取决于 TransactionType 的 ordinal/显式编号实现）。
      */
     @Excel(name = "交易类型", orderNum = "5", width = 25)
     @Enumerated(EnumType.ORDINAL)
