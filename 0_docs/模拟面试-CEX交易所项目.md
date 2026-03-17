@@ -23,7 +23,8 @@
 ### 2. 总览：一条链路一句话
 
 - **从端到端**：  
-  **用户下单 → 校验 & 冻结资金 → 写订单库 → Kafka `exchange-order` → 撮合引擎 `CoinTrader` → 生成成交 `ExchangeTrade` → Kafka `exchange-trade` / `exchange-order-completed` / `exchange-trade-plate` → 成交落库 + 行情处理 + WebSocket 推送 → 账户服务按事件更新资金（冻结扣减 + 对手币种入账）。**
+  **用户下单 → 校验 & 冻结资金 + 写订单(MySQL) → 写入 outbox → Kafka `exchange-order-ingress` → relay 转发到 `exchange-order` → 撮合引擎 `CoinTrader` → 统一产出撮合结果 Kafka `exchange-match-result`（trades + completedOrders）→**
+  **market 消费：成交明细落库 + 行情/K线/推送；clearing 消费：清算落库并发布 `exchange-clearing-result`；settlement 消费：生成资金指令并发布 `exchange-fund-instruction`；fund 消费：执行钱包入账/扣减并落资金流水。**
 
 ---
 
@@ -40,18 +41,22 @@
     - 账户表里典型有 `balance`（可用）、`frozen`（冻结）两个字段：
       - 下单时：`balance -= 需要金额；frozen += 需要金额`，放在一个事务里。
   - 落订单库 `ExchangeOrder`（状态 `TRADING`）。
-  - 发送 Kafka：
-    - `kafkaTemplate.send("exchange-order", JSON(ExchangeOrder))`。
+  - **可靠投递（Outbox）**：
+    - 本项目采用 “落库 + outbox” 的方式保证事件可靠投递：订单写入 MySQL 后，同时写一条 outbox 记录；
+    - 后台再把 outbox 投递到 Kafka（下单入口 topic：`exchange-order-ingress`），避免“订单落库成功但消息丢失”。
 
 > **面试可说**：  
-> 「我们下单是‘先冻结后入撮合’。以限价买单为例，会在同一个事务里检查 USDT 可用余额够不够，然后从 `balance` 扣到 `frozen`，同时插入订单记录并投递一条 `exchange-order` 到 Kafka，保证‘有订单就一定有冻结’，避免资金和订单状态错位。」
+> 「我们下单是‘先冻结后入撮合’，并且用 outbox 保证可靠投递。以限价买单为例，会在同一个事务里校验余额并从 `balance` 扣到 `frozen`，插入订单记录（TRADING）+ 写 outbox，随后异步投递到 Kafka 的下单入口 topic，保证‘订单落库’与‘进入撮合队列’最终一致。」
 
 ---
 
 #### 3.2 Kafka → 撮合入口（订单进 CoinTrader）
 
-- **消费者**：`ExchangeOrderConsumer.onOrderSubmitted()`（`exchange`）
-  - 从 Kafka 读取 `exchange-order`。
+- **入口 topic 与内部 topic 分离**：
+  - 外部服务写入 `exchange-order-ingress`（下单入口 topic）。
+  - `exchange-relay` 消费入口 topic 后转发到撮合内部 topic `exchange-order`（按 symbol 作为 key，保证同交易对落同分区）。
+- **撮合消费者**：`ExchangeOrderConsumer.onOrderSubmitted()`（`exchange`）
+  - 从 Kafka 读取内部 topic `exchange-order`。
   - 反序列化为 `ExchangeOrder`。
   - `CoinTrader trader = traderFactory.getTrader(order.getSymbol())` 获取当前交易对撮合实例。
   - 若 `trader.isTradingHalt()` 或 `!trader.getReady()`：
@@ -83,41 +88,32 @@
       - `buyOrderId`, `sellOrderId`
       - 成交额、时间戳等。
     - 更新订单本身的已成交数量和状态。
-- **发送三类 Kafka 事件**：
-  - 成交明细：`exchange-trade`（`List<ExchangeTrade>`）。
-  - 订单完成：`exchange-order-completed`（`List<ExchangeOrder>`）。
-  - 盘口快照：`exchange-trade-plate`（`TradePlate` 深度）。
+- **统一出口（方案 A）**：
+  - 撮合引擎把“成交明细 + 完全成交订单”合并为一条消息，发送到 `exchange-match-result`：
+    - `trades[]`：本次撮合产生的成交明细
+    - `completedOrders[]`：本次撮合完成的订单
+    - `messageId`：用于幂等去重/防重复处理
+  - 这样下游只需要监听一个 topic，减少多 topic 的一致性问题。
 
 ---
 
 #### 3.4 下游消费：成交入库、行情 K 线与盘口
 
-- **消费者**：`ExchangeTradeConsumer`（`market`）
-- **处理 `exchange-trade`**：
-  - `exchangeOrderService.processExchangeTrade(trades)`：
-    - 成交明细落库（用于对账、流水）。
-    - 校准订单的成交数量等。
-  - `CoinProcessor.process(trades)`（如 `DefaultCoinProcessor`）：
-    - 按 1 分钟滚动更新当前 K 线（OHLC、volume、amount）。
-    - 更新 24 小时 `CoinThumb`（涨跌幅、24h 高低、成交额等）。
-  - `pushJob.addTrades(...)` + `WebSocket / Netty`：
-    - 推送个人成交、公共成交列表、K 线数据。
+- **market（行情/成交明细/推送）**：`ExchangeTradeConsumer` 消费 `exchange-match-result`
+  - 幂等处理（按 `messageId` 做去重）：订单状态落库 + 成交明细落库（必要时写 Mongo 聚合）；
+  - `CoinProcessor` 更新 K 线与 24h 行情；
+  - WebSocket/Netty 推送成交与订单变更。
 
-- **处理 `exchange-order-completed`**：
-  - `exchangeOrderService.tradeCompleted(orders)`：
-    - 更新订单状态为 `COMPLETED`。
-    - **资金结算**（冻结资金 → 实际支付 / 实际收入）：
-      - 买单：
-        - 从冻结 USDT 中扣除成交额（不退回可用）。
-        - 给用户增加 BTC 可用余额。
-      - 卖单：
-        - 从冻结 BTC 中扣除成交数量。
-        - 给用户增加 USDT 可用余额。
-      - 处理未成交部分：撤单时会将对应冻结金额退回 `balance`。
+- **clearing（清算）**：`ClearingMatchResultConsumer` 消费 `exchange-match-result`
+  - 计算清算结果落库，发布 `exchange-clearing-result`（幂等按 `messageId`）。
 
-- **处理 `exchange-trade-plate`**：
-  - 更新缓存中的盘口深度。
-  - 推送实时买卖盘到前端。
+- **settlement（结算）**：`SettlementConsumer` 消费 `exchange-clearing-result`
+  - 生成资金指令落库并发布 `exchange-fund-instruction`（幂等按 `messageId`）。
+
+- **fund（资金执行）**：`FundInstructionConsumer` 消费 `exchange-fund-instruction`
+  - 执行钱包扣减/入账与流水落库（幂等按 `messageId`），最终资金以资金服务落库为准。
+
+> **面试要点**：market **不直接改钱包**（走清算→结算→资金指令流水线时），避免把“行情与撮合结果处理”绑定到资金一致性上。
 
 ---
 
@@ -248,21 +244,19 @@ insert ExchangeOrder(...)
 - 修改订单：
   - `O_A_1.status = COMPLETED, tradedAmount = 0.5`
   - `O_B_1.status = COMPLETED, tradedAmount = 0.5`
-- 发送事件：
-  - `exchange-trade`: `[T_1]`
-  - `exchange-order-completed`: `[O_A_1, O_B_1]`
-  - `exchange-trade-plate`: 新盘口快照。
+- 发送事件（统一出口）：
+  - `exchange-match-result`：包含 `messageId` + `trades=[T_1]` + `completedOrders=[O_A_1, O_B_1]`
 
-#### 5.5 成交落库 & 行情
+#### 5.5 成交落库 & 行情（market）
 
-- `exchange-trade` 被 `ExchangeTradeConsumer` 消费：
-  - 明细表插入 `T_1`。
+- `exchange-match-result` 被 `market` 消费：
+  - 明细表插入 `T_1`，订单状态更新为 `COMPLETED`。
   - `DefaultCoinProcessor` 更新 1m K 线、24h 行情。
-  - WebSocket 推送最新成交、K 线。
+  - WebSocket/Netty 推送最新成交与订单变更。
 
-#### 5.6 资金最终入账（`exchange-order-completed`）
+#### 5.6 资金最终入账（clearing → settlement → fund）
 
-- `tradeCompleted([O_A_1, O_B_1])`：
+- `exchange-match-result` → 清算发布 `exchange-clearing-result` → 结算发布 `exchange-fund-instruction` → 资金服务执行入账：
 
 **买家 A：**
 
@@ -361,8 +355,8 @@ key = "ETHUSDT-SELL"
 - **答题关键词**：解耦、异步、削峰。
 - **参考答法**：
   - 在我们交易所项目里，Kafka 主要解决三个问题：**解耦、异步、削峰**。
-  - **解耦**：下单、撮合、清算、行情、推送之间全部通过 Topic 通信，比如订单用 `exchange-order`，成交用 `exchange-trade`，盘口用 `exchange-trade-plate`，各服务只关心自己消费的 Topic，不需要知道对方地址和实现。
-  - **异步**：撮合引擎 `CoinTrader` 完成一批撮合后，只负责发出 `ExchangeTrade`、订单完成、盘口快照三类消息；成交落库、资金结算、K 线计算和 WebSocket 推送都在后台异步完成，不阻塞撮合线程。
+  - **解耦**：下单、撮合、清算、结算、资金、行情、推送之间通过 Topic 通信。撮合统一出口 `exchange-match-result`，清算/结算/资金分别订阅自己的 topic，不依赖彼此的 RPC 地址与实现。
+  - **异步**：撮合线程只负责撮合并发出 `exchange-match-result`；行情计算、推送、清算、资金执行都在下游异步完成，不阻塞撮合。
   - **削峰**：行情剧烈波动或活动高峰时，下单和成交量会瞬间冲高。我们先把订单写入 Kafka，让流量“排队缓冲”，撮合和清算服务按自己的处理能力持续消费，避免数据库和撮合服务被瞬时打爆。
 
 ---
@@ -372,15 +366,18 @@ key = "ETHUSDT-SELL"
 - **答题关键词**：主题、分区有序、生产者、消费组。
 - **参考答法**：
   - **Topic（主题）**：按业务分类的消息集合，比如：
-    - `exchange-order`：订单请求；
-    - `exchange-trade`：撮合成交明细；
-    - `exchange-trade-plate`：盘口快照；
-    - `exchange-order-completed` / `exchange-order-cancel-success`：订单完成/撤单结果。
+    - `exchange-order-ingress`：下单入口（外部服务写入，relay 转发）；
+    - `exchange-order`：撮合内部下单队列；
+    - `exchange-match-result`：撮合统一出口（trades + completedOrders）；
+    - `exchange-clearing-result`：清算结果；
+    - `exchange-fund-instruction`：资金指令。
   - **Partition（分区）**：Topic 物理上拆成多个分区，**每个分区内消息天然有序**，分区之间不保证顺序。
-  - **Producer（生产者）**：往 Topic 写消息的服务，比如下单接口所在服务是 `exchange-order` 的 Producer，撮合服务 `CoinTrader` 是 `exchange-trade`/`exchange-trade-plate` 的 Producer。
+  - **Producer（生产者）**：往 Topic 写消息的服务，比如下单服务写 `exchange-order-ingress`，撮合服务写 `exchange-match-result`，清算写 `exchange-clearing-result`，结算写 `exchange-fund-instruction`。
   - **Consumer / Consumer Group（消费者/消费组）**：
-    - 撮合服务 `exchange` 是 `exchange-order` 的 Consumer；
-    - 行情服务 `market` 是 `exchange-trade`、`exchange-trade-plate`、`exchange-order-completed` 的 Consumer；
+    - relay 消费 `exchange-order-ingress` 并转发到 `exchange-order`；
+    - 撮合服务 `exchange` 消费 `exchange-order`；
+    - market/clearing 都消费 `exchange-match-result`（不同 group，各自职责）；
+    - settlement 消费 `exchange-clearing-result`，fund 消费 `exchange-fund-instruction`。
     - 同一个 Group 内多个实例会自动“分摊”不同分区的消息，实现水平扩展。
 
 ---
@@ -420,9 +417,9 @@ key = "ETHUSDT-SELL"
   - 一般来说消息队列有三个典型用途：**解耦、异步、削峰**。
   - 在我们项目里的对应关系：
     - **解耦**：  
-      下单服务只管发 `exchange-order` 事件，不关心是哪个撮合服务、行情服务、账户服务来处理；以后要加一个“风控审计服务”，只要新订阅这个 Topic 就行。
+      下单服务只管发 `exchange-order-ingress`，撮合统一出口 `exchange-match-result`；以后要加“审计/风控”服务，只要订阅对应 topic 即可，不需要改撮合和资金服务。
     - **异步**：  
-      撮合引擎只发 `exchange-trade` / `exchange-trade-plate`，成交入库、K 线计算、WebSocket 推送都通过不同的 Consumer 异步处理，不拖慢撮合。
+      撮合引擎只发 `exchange-match-result`，成交入库、K 线计算、推送、清算、资金执行全部异步完成，不拖慢撮合。
     - **削峰**：  
       行情极端波动或者活动时，下单和成交量暴涨。Kafka 起到“水库”的作用，先接住流量，撮合和清算服务可以稍后均匀消费，避免数据库和内存被瞬时打满。
 
