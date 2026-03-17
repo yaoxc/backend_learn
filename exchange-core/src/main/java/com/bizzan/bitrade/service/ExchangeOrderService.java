@@ -413,6 +413,7 @@ public class ExchangeOrderService extends BaseService {
     /**
      * 【清算→结算→资金流水线】仅落订单明细与订单状态，不写钱包、不写资金流水、不返佣。
      * 钱包与流水由资金服务消费 exchange-fund-instruction 后统一执行。
+     * 会写 MongoDB（exchange_order_detail、order_detail_aggregation），需 Mongo 可用。
      */
     @Transactional(rollbackFor = Exception.class)
     public boolean processMatchResultIdempotentOrderOnly(String messageId, List<ExchangeTrade> trades, List<ExchangeOrder> completedOrders) throws Exception {
@@ -427,6 +428,22 @@ public class ExchangeOrderService extends BaseService {
         processed.setMessageId(messageId);
         processedMatchResultMessageRepository.save(processed);
         processMatchResultOrderOnly(trades, completedOrders);
+        return true;
+    }
+
+    /**
+     * 仅更新订单状态（MySQL exchange_order），不写成交明细（不写 MongoDB）、不占 messageId 幂等。
+     * 供不依赖 MongoDB 的消费者（如 exchange-api）使用，避免 Mongo 认证失败导致异常。
+     * 本方法不写入 processed_match_result_message，以便 market 消费同一条 match-result 时仍可幂等落库并写成交明细。
+     * 重复调用对已 COMPLETED 的订单为幂等（tradeCompletedOrderOnly 会更新为同值）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean processMatchResultIdempotentOrderStatusOnly(String messageId, List<ExchangeTrade> trades, List<ExchangeOrder> completedOrders) throws Exception {
+        if (completedOrders != null) {
+            for (ExchangeOrder order : completedOrders) {
+                tradeCompletedOrderOnly(order.getOrderId(), order.getTradedAmount(), order.getTurnover());
+            }
+        }
         return true;
     }
 

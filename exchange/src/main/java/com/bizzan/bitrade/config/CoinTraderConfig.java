@@ -43,6 +43,8 @@ public class CoinTraderConfig {
             trader.setCoinScale(coin.getCoinScale());
             trader.setPublishType(coin.getPublishType());
             trader.setClearTime(coin.getClearTime());
+
+            // 刚初始化时 **暂停交易**，防止未准备好就接受订单，导致数据不一致。
             trader.stopTrading();
 
             // 【改造范围】方案 A：为每个 symbol 创建 内存队列+WAL+后台 Sender，撮合结果经此可靠投递且不阻塞热路径

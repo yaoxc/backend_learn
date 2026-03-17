@@ -67,7 +67,24 @@ public class CoinTrader {
     // ===================== 盘口与状态 =====================
     private TradePlate buyTradePlate;
     private TradePlate sellTradePlate;
+    /**
+     * 含义：当前交易对是否处于“暂停交易”状态。
+     * 谁改：haltTrading() → true；resumeTrading() / stopTrading() → true（stop 只做 halt，不主动撤单）。
+     * 作用：
+     *  - ExchangeOrderConsumer：收到新订单时，若 trader.isTradingHalt() 为 true，不撮合，直接发 exchange-order-cancel-success 把订单撤掉。
+     *  - CoinTrader.trade()：若 tradingHalt 为 true，直接 return，不执行撮合逻辑。
+     * 用途：运维/维护时暂停该交易对，不接新单、不产生新成交。
+     * 
+     */
     private boolean tradingHalt = false;
+    /**
+     * 含义：该交易对的撮合引擎是否已完成初始化（订单簿恢复/回放等），可以对外接单、推盘口。
+     * 谁改：只在 CoinTraderEvent / MonitorController（start-trader、reset-trader）里，在完成“加载订单并 trade 进引擎”后调用 trader.setReady(true)。
+     * 作用：
+     *  - ExchangeOrderConsumer：若 !trader.getReady()，认为撮合器还没准备好，不撮合，直接发 exchange-order-cancel-success 撤单。
+     *  - CoinTrader.addLimitPriceOrder()：只有 ready == true 时才 sendTradePlateMessage(...)，即 ready 为 false 时不推盘口，避免启动/恢复阶段把未就绪数据推给前端。
+     * 用途：区分“正在恢复/初始化”和“已就绪”，避免恢复期接单或推送脏盘口。
+     */
     private boolean ready = false;
 
     // ===================== 幂等防重（撮合入口） =====================

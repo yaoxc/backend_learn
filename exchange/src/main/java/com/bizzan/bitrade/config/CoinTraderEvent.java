@@ -82,6 +82,9 @@ public class CoinTraderEvent implements ApplicationListener<ContextRefreshedEven
                 }
             }
             trader.setReady(true);
+
+            // 表示“恢复完自动开盘”，这里和MonitorController的resumeTrading()是同一个方法
+            trader.resumeTrading();
         });
     }
 
