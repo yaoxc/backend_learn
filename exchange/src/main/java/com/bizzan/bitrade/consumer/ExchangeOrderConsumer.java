@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSON;
 import com.bizzan.bitrade.Trader.CoinTrader;
 import com.bizzan.bitrade.Trader.CoinTraderFactory;
 import com.bizzan.bitrade.entity.ExchangeOrder;
-import com.bizzan.bitrade.service.ExchangeCoinService;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -26,7 +25,7 @@ public class ExchangeOrderConsumer {
     @Autowired
     private KafkaTemplate<String,String> kafkaTemplate;
 
-    @KafkaListener(topics = "exchange-order",containerFactory = "kafkaListenerContainerFactory",groupId = "exchange-order-debug")
+    @KafkaListener(topics = "exchange-order",containerFactory = "kafkaListenerContainerFactory",groupId = "${exchange.kafka.group.order:service-exchange-order}")
     public void onOrderSubmitted(List<ConsumerRecord<String,String>> records, Acknowledgment ack){
         for (int i = 0; i < records.size(); i++) {
             ConsumerRecord<String,String> record  = records.get(i);
@@ -62,7 +61,7 @@ public class ExchangeOrderConsumer {
         }
     }
 
-    @KafkaListener(topics = "exchange-order-cancel",containerFactory = "kafkaListenerContainerFactory", groupId = "exchange-order-cancel-debug")
+    @KafkaListener(topics = "exchange-order-cancel",containerFactory = "kafkaListenerContainerFactory", groupId = "${exchange.kafka.group.cancel:service-exchange-order-cancel}")
     public void onOrderCancel(List<ConsumerRecord<String,String>> records, Acknowledgment ack){
         for (int i = 0; i < records.size(); i++) {
             ConsumerRecord<String,String> record  = records.get(i);

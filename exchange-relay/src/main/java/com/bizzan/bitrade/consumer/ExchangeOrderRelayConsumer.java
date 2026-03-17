@@ -62,7 +62,11 @@ public class ExchangeOrderRelayConsumer {
      * - 不与撤单入口共用同一个 group，是因为两者消费的是不同 topic，语义和重试策略不同，
      *   没有必要共享位点；groupId 在 Kafka 中是“同一批 topic 的消费伸缩单元”，而不是模块级 namespace。
      */
-    @KafkaListener(topics = "${relay.order.ingress-topic:exchange-order-ingress}", containerFactory = "kafkaListenerContainerFactory", groupId = "market-relay-group-order-debug")
+    @KafkaListener(
+            topics = "${relay.order.ingress-topic:exchange-order-ingress}",
+            containerFactory = "kafkaListenerContainerFactory",
+            groupId = "${relay.kafka.group.order:service-exchange-relay-order-ingress}"
+    )
     public void onOrderIngress(List<ConsumerRecord<String, String>> records, Acknowledgment ack) throws Exception {
         for (ConsumerRecord<String, String> record : records) {
             relayOne(record, orderIngressTopic, internalOrderTopic);
@@ -77,7 +81,11 @@ public class ExchangeOrderRelayConsumer {
      * - 使用另一个 groupId（market-relay-group-cancel-debug），只负责消费撤单入口 topic；
      * - 与下单入口分组，可以独立扩缩容和灰度发布，也不会因为某一类消息异常影响另一类的消费进度。
      */
-    @KafkaListener(topics = "${relay.order.cancel-ingress-topic:exchange-order-cancel-ingress}", containerFactory = "kafkaListenerContainerFactory", groupId = "market-relay-group-cancel-debug")
+    @KafkaListener(
+            topics = "${relay.order.cancel-ingress-topic:exchange-order-cancel-ingress}",
+            containerFactory = "kafkaListenerContainerFactory",
+            groupId = "${relay.kafka.group.cancel:service-exchange-relay-cancel-ingress}"
+    )
     public void onCancelIngress(List<ConsumerRecord<String, String>> records, Acknowledgment ack) throws Exception {
         for (ConsumerRecord<String, String> record : records) {
             relayOne(record, cancelIngressTopic, internalCancelTopic);

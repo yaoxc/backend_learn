@@ -7,7 +7,6 @@ import com.bizzan.bitrade.entity.ExchangeOrder;
 import com.bizzan.bitrade.entity.ExchangeTrade;
 import com.bizzan.bitrade.service.ClearingService;
 
-import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +37,11 @@ public class ClearingMatchResultConsumer {
      *   <li>幂等由 ClearingService 按 messageId/业务键保证，容忍 Kafka 层面的「至少一次」重投。</li>
      * </ul>
      */
-    @KafkaListener(topics = "exchange-match-result", containerFactory = "kafkaListenerContainerFactory", groupId = "market-clearing-group")
+    @KafkaListener(
+            topics = "exchange-match-result",
+            containerFactory = "kafkaListenerContainerFactory",
+            groupId = "${clearing.kafka.group.match-result:service-clearing-match-result}"
+    )
     public void handleMatchResult(List<ConsumerRecord<String, String>> records, Acknowledgment ack) {
         try {
             for (ConsumerRecord<String, String> record : records) {
