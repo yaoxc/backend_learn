@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.bizzan.bitrade.dao.SettlementResultRepository;
 import com.bizzan.bitrade.dto.ClearingResultDTO;
 import com.bizzan.bitrade.dto.FundInstructionDTO;
+import com.bizzan.bitrade.entity.MemberTransaction;
 import com.bizzan.bitrade.entity.SettlementResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,8 @@ public class SettlementService {
         dto.setMessageId(clearing.getMessageId());
         dto.setSymbol(clearing.getSymbol());
         dto.setTs(clearing.getTs());
+        dto.setRefType(MemberTransaction.REF_TYPE_ORDER);
+        dto.setRefId(clearing.getMessageId());
         for (ClearingResultDTO.TradeClearingItem item : clearing.getTradeClearingList()) {
             Long memberId = item.getMemberId();
             String orderId = item.getOrderId();
@@ -54,7 +57,7 @@ public class SettlementService {
                 in.setSymbol(item.getIncomeSymbol());
                 BigDecimal fee = (item.getFee() != null && item.getFee().compareTo(BigDecimal.ZERO) > 0) ? item.getFee() : BigDecimal.ZERO;
                 in.setAmount(item.getIncomeAmount().add(fee));
-                in.setType(FundInstructionDTO.InstructionType.INCOME);
+                in.setInstructionType(FundInstructionDTO.InstructionType.INCOME);
                 dto.getInstructions().add(in);
             }
             if (item.getOutcomeAmount() != null && item.getOutcomeAmount().compareTo(BigDecimal.ZERO) > 0) {
@@ -63,7 +66,7 @@ public class SettlementService {
                 out.setOrderId(orderId);
                 out.setSymbol(item.getOutcomeSymbol());
                 out.setAmount(item.getOutcomeAmount().negate());
-                out.setType(FundInstructionDTO.InstructionType.OUTCOME);
+                out.setInstructionType(FundInstructionDTO.InstructionType.OUTCOME);
                 dto.getInstructions().add(out);
             }
             if (item.getFee() != null && item.getFee().compareTo(BigDecimal.ZERO) > 0) {
@@ -73,14 +76,14 @@ public class SettlementService {
                 fee.setOrderId(orderId);
                 fee.setSymbol(feeSymbol);
                 fee.setAmount(item.getFee().negate());
-                fee.setType(FundInstructionDTO.InstructionType.FEE);
+                fee.setInstructionType(FundInstructionDTO.InstructionType.FEE);
                 dto.getInstructions().add(fee);
                 FundInstructionDTO.FundInstructionItem feeRevenue = new FundInstructionDTO.FundInstructionItem();
                 feeRevenue.setMemberId(platformMemberId);
                 feeRevenue.setOrderId(orderId);
                 feeRevenue.setSymbol(feeSymbol);
                 feeRevenue.setAmount(item.getFee());
-                feeRevenue.setType(FundInstructionDTO.InstructionType.FEE_REVENUE);
+                feeRevenue.setInstructionType(FundInstructionDTO.InstructionType.FEE_REVENUE);
                 dto.getInstructions().add(feeRevenue);
             }
         }
@@ -93,7 +96,7 @@ public class SettlementService {
             ref.setOrderId(item.getOrderId());
             ref.setSymbol(item.getCoinSymbol());
             ref.setAmount(item.getRefundAmount());
-            ref.setType(FundInstructionDTO.InstructionType.REFUND);
+            ref.setInstructionType(FundInstructionDTO.InstructionType.REFUND);
             dto.getInstructions().add(ref);
         }
         return dto;

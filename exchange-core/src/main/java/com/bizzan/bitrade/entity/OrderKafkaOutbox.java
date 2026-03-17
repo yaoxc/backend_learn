@@ -11,7 +11,7 @@ import java.util.Date;
  */
 @Data
 @Entity
-@Table(name = "order_kafka_outbox", indexes = {
+@Table(name = "exchange_order_kafka_outbox", indexes = {
         @Index(name = "idx_outbox_status", columnList = "status"),
         @Index(name = "idx_outbox_topic_key", columnList = "topic, message_key")
 })

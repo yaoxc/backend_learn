@@ -13,12 +13,45 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
- * @desc 会员交易记录，包括充值、提现、转账等
- *
+ * 会员交易记录，包括充值、提现、转账、下单冻结、归集冻结等。
+ * 通过 refType + refId 关联具体业务，便于按业务查询与平账。
  */
 @Entity
 @Data
 public class MemberTransaction {
+
+    // ===================== 已有 / 资金指令常用 =====================
+    /** 业务类型：币币订单（下单冻结、成交、退款等），refId=订单号 */
+    public static final String REF_TYPE_ORDER = "ORDER";
+    /** 业务类型：提现，refId=提现记录 ID */
+    public static final String REF_TYPE_WITHDRAW = "WITHDRAW";
+    /** 业务类型：归集/sweep，refId=归集批次或相关 ID */
+    public static final String REF_TYPE_SWEEP = "SWEEP";
+    /** 业务类型：充值/存款（通用），refId=充值记录 ID */
+    public static final String REF_TYPE_DEPOSIT = "DEPOSIT";
+    /** 业务类型：冷热再平衡，refId=再平衡批次或相关 ID */
+    public static final String REF_TYPE_REBALANCE = "REBALANCE";
+
+    // ===================== 补充：与 TransactionType 场景对齐 =====================
+    /** 业务类型：链上充值（扫链入账），refId=充值/区块相关 ID */
+    public static final String REF_TYPE_DEPOSIT_CHAIN = "DEPOSIT_CHAIN";
+    /** 业务类型：C2C 充值，refId=订单或划拨记录 ID */
+    public static final String REF_TYPE_DEPOSIT_C2C = "DEPOSIT_C2C";
+    /** 业务类型：人工充值，refId=工单或操作记录 ID */
+    public static final String REF_TYPE_ADMIN_RECHARGE = "ADMIN_RECHARGE";
+    /** 业务类型：转账，refId=转账记录 ID */
+    public static final String REF_TYPE_TRANSFER = "TRANSFER";
+    /** 业务类型：法币/C2C 订单，refId=广告单或订单 ID */
+    public static final String REF_TYPE_OTC = "OTC";
+    /** 业务类型：CTC 订单，refId=订单 ID */
+    public static final String REF_TYPE_CTC = "CTC";
+    /** 业务类型：红包，refId=红包或领取明细 ID */
+    public static final String REF_TYPE_RED_PACKET = "RED_PACKET";
+    /** 业务类型：活动/营销（奖励、推广、分红、投票、活动兑换等），refId=活动或发放记录 ID */
+    public static final String REF_TYPE_ACTIVITY = "ACTIVITY";
+    /** 业务类型：配对，refId=配对记录 ID */
+    public static final String REF_TYPE_MATCH = "MATCH";
+
     @Excel(name = "交易记录编号", orderNum = "1", width = 25)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
@@ -51,9 +84,22 @@ public class MemberTransaction {
      */
     private String symbol;
     /**
-     * 充值或提现地址、或转账地址
+     * address 只表示链上/账户地址（充值、提现、转账地址等），不再用来存业务 ID。
      */
     private String address;
+
+    /**
+     * 业务类型：用于关联具体业务，便于按业务查询与平账。
+     * 建议取值见本类 REF_TYPE_* 常量：ORDER/WITHDRAW/SWEEP/DEPOSIT/DEPOSIT_CHAIN/DEPOSIT_C2C/ADMIN_RECHARGE/REBALANCE/TRANSFER/OTC/CTC/RED_PACKET/ACTIVITY/MATCH。
+     */
+    @Column(length = 32)
+    private String refType;
+    /**
+     * 业务主键：对应业务表的主键或业务单号（如 orderId、withdrawRecordId、sweepBatchId、depositId）。
+     * 与 refType 一起唯一关联到具体业务记录，避免复用 address 等字段。
+     */
+    @Column(length = 64)
+    private String refId;
 
     /**
      * 交易手续费

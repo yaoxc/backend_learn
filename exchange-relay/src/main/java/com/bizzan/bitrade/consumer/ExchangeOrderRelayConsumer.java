@@ -55,27 +55,40 @@ public class ExchangeOrderRelayConsumer {
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    @KafkaListener(topics = "${relay.order.ingress-topic:exchange-order-ingress}", containerFactory = "kafkaListenerContainerFactory")
+    /**
+     * 下单入口消费：
+     * - 使用单独的 groupId（market-relay-group-order-debug），只负责消费下单入口 topic；
+     * - 不与撤单入口共用同一个 group，是因为两者消费的是不同 topic，语义和重试策略不同，
+     *   没有必要共享位点；groupId 在 Kafka 中是“同一批 topic 的消费伸缩单元”，而不是模块级 namespace。
+     */
+    @KafkaListener(topics = "${relay.order.ingress-topic:exchange-order-ingress}", containerFactory = "kafkaListenerContainerFactory", groupId = "market-relay-group-order-debug")
     public void onOrderIngress(List<ConsumerRecord<String, String>> records, Acknowledgment ack) {
-        log.info("数据中转服务 ----- Kafka消费者 ----- onOrderIngress records: {}", records);
         for (ConsumerRecord<String, String> record : records) {
             relayOne(record, orderIngressTopic, internalOrderTopic);
         }
         // 使用手动提交模式，只有当本批次消息全部成功中转后才提交 offset。
         // 避免在转发失败时仍然提交位点，保证至少处理一次语义，便于问题排查和重试。
         if (ack != null) {
-            ack.acknowledge();
+            // 根据当前调试/联调用途选择是否开启手动 ack：
+            // - 正式环境：建议打开 ack.acknowledge()，确保“转发成功后再提交位点”；
+            // - 调试环境：可以先注释掉，避免因消费异常导致同一批数据被反复重放干扰排查。
+            // ack.acknowledge();
         }
     }
 
-    @KafkaListener(topics = "${relay.order.cancel-ingress-topic:exchange-order-cancel-ingress}", containerFactory = "kafkaListenerContainerFactory")
+    /**
+     * 撤单入口消费：
+     * - 使用另一个 groupId（market-relay-group-cancel-debug），只负责消费撤单入口 topic；
+     * - 与下单入口分组，可以独立扩缩容和灰度发布，也不会因为某一类消息异常影响另一类的消费进度。
+     */
+    @KafkaListener(topics = "${relay.order.cancel-ingress-topic:exchange-order-cancel-ingress}", containerFactory = "kafkaListenerContainerFactory", groupId = "market-relay-group-cancel-debug")
     public void onCancelIngress(List<ConsumerRecord<String, String>> records, Acknowledgment ack) {
-        log.info("数据中转服务 ----- Kafka消费者 ----- onCancelIngress records: {}", records);
         for (ConsumerRecord<String, String> record : records) {
             relayOne(record, cancelIngressTopic, internalCancelTopic);
         }
+        // 撤单入口这里默认开启手动 ack，只有当本批次撤单全部成功中转后才提交 offset。
         if (ack != null) {
-            ack.acknowledge();
+            // ack.acknowledge();
         }
     }
 
@@ -84,7 +97,7 @@ public class ExchangeOrderRelayConsumer {
         if (raw == null || raw.trim().isEmpty()) {
             return;
         }
-
+        log.info("数据中转服务Kafka消费者: offset:{}, fromTopic:{}, toTopic:{}, record: {}", record.offset(), fromTopic, toTopic, record.value());
         ExchangeOrder order;
         try {
             order = JSON.parseObject(raw, ExchangeOrder.class);

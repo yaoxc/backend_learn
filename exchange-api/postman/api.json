@@ -259,6 +259,202 @@
           },
           "description": "返回 USER_ADD_EXCHANGE_ORDER_TIME_LIMIT_EXPIRE_TIME，用于前端限流。"
         }
+      },
+      {
+        "name": "历史委托-个人中心 /order/personal/history",
+        "request": {
+          "method": "GET",
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/personal/history?symbol=BTC/USDT&type=&status=&startTime=&endTime=&direction=&pageNo=1&pageSize=10",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "personal", "history"],
+            "query": [
+              { "key": "symbol", "value": "BTC/USDT" },
+              { "key": "type", "value": "" },
+              { "key": "status", "value": "" },
+              { "key": "startTime", "value": "" },
+              { "key": "endTime", "value": "" },
+              { "key": "direction", "value": "" },
+              { "key": "pageNo", "value": "1" },
+              { "key": "pageSize", "value": "10" }
+            ]
+          },
+          "description": "需要 Session 的个人中心历史委托查询，支持按 symbol/type/status/time/direction 过滤。"
+        }
+      },
+      {
+        "name": "当前委托-个人中心 /order/personal/current",
+        "request": {
+          "method": "GET",
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/personal/current?symbol=&type=&startTime=&endTime=&direction=&pageNo=1&pageSize=10",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "personal", "current"],
+            "query": [
+              { "key": "symbol", "value": "" },
+              { "key": "type", "value": "" },
+              { "key": "startTime", "value": "" },
+              { "key": "endTime", "value": "" },
+              { "key": "direction", "value": "" },
+              { "key": "pageNo", "value": "1" },
+              { "key": "pageSize", "value": "10" }
+            ]
+          },
+          "description": "需要 Session 的个人中心当前委托列表。"
+        }
+      },
+      {
+        "name": "查询成交明细 /order/detail/{orderId}",
+        "request": {
+          "method": "GET",
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/detail/{{orderId}}",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "detail", "{{orderId}}"]
+          },
+          "description": "按订单号查询成交明细（需要 Session）。"
+        }
+      },
+      {
+        "name": "个人当前委托-机器人Mock /order/mockcurrentydhdnskd",
+        "request": {
+          "method": "GET",
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/mockcurrentydhdnskd?uid=1&sign=987654321asdf&symbol=BTC/USDT&pageNo=1&pageSize=10",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "mockcurrentydhdnskd"],
+            "query": [
+              { "key": "uid", "value": "1" },
+              { "key": "sign", "value": "987654321asdf" },
+              { "key": "symbol", "value": "BTC/USDT" },
+              { "key": "pageNo", "value": "1" },
+              { "key": "pageSize", "value": "10" }
+            ]
+          },
+          "description": "行情机器人查询指定 uid 的当前挂单列表。"
+        }
+      },
+      {
+        "name": "机器人撤单 /order/mockcancelydhdnskd",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded",
+              "type": "text"
+            }
+          ],
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/order/mockcancelydhdnskd",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "order", "mockcancelydhdnskd"]
+          },
+          "body": {
+            "mode": "urlencoded",
+            "urlencoded": [
+              { "key": "uid", "value": "1", "type": "text" },
+              { "key": "sign", "value": "987654321asdf", "type": "text" },
+              { "key": "orderId", "value": "{{orderId}}", "type": "text" }
+            ]
+          },
+          "description": "行情机器人撤单，内部仍通过 outbox + Kafka 转发到撮合。"
+        }
+      },
+      {
+        "name": "获取基币列表 /exchange-coin/base-symbol",
+        "request": {
+          "method": "GET",
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/exchange-coin/base-symbol",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "exchange-coin", "base-symbol"]
+          },
+          "description": "获取交易对配置中的基币列表（如 USDT/BTC/ETH 等）。"
+        }
+      },
+      {
+        "name": "添加自选 /favor/add",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded",
+              "type": "text"
+            }
+          ],
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/favor/add",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "favor", "add"]
+          },
+          "body": {
+            "mode": "urlencoded",
+            "urlencoded": [
+              { "key": "symbol", "value": "BTC/USDT", "type": "text" }
+            ]
+          },
+          "description": "需要 Session，将指定交易对加入当前用户自选。"
+        }
+      },
+      {
+        "name": "查询自选列表 /favor/find",
+        "request": {
+          "method": "GET",
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/favor/find",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "favor", "find"]
+          },
+          "description": "需要 Session，查询当前用户所有自选交易对。"
+        }
+      },
+      {
+        "name": "删除自选 /favor/delete",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded",
+              "type": "text"
+            }
+          ],
+          "url": {
+            "raw": "http://127.0.0.1:6003/exchange/favor/delete",
+            "protocol": "http",
+            "host": ["127", "0", "0", "1"],
+            "port": "6003",
+            "path": ["exchange", "favor", "delete"]
+          },
+          "body": {
+            "mode": "urlencoded",
+            "urlencoded": [
+              { "key": "symbol", "value": "BTC/USDT", "type": "text" }
+            ]
+          },
+          "description": "需要 Session，从当前用户自选中删除指定交易对。"
+        }
       }
     ],
     "variable": [

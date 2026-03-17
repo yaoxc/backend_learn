@@ -15,6 +15,7 @@ import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.listener.ContainerProperties;
 
 @Configuration
 @EnableKafka
@@ -61,6 +62,8 @@ public class KafkaConsumerConfiguration {
 		factory.setConsumerFactory(consumerFactory());
 		factory.setConcurrency(concurrency);
 		factory.getContainerProperties().setPollTimeout(1500);
+		// 使用批量监听 + 手动提交 offset，配合监听方法入参 Acknowledgment。
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
 		factory.setBatchListener(true);
 		return factory;
 	}

@@ -124,6 +124,9 @@ public class ExchangeOrderService extends BaseService {
                 if (result.getCode() != 0) {
                     return MessageResult.error(500, msService.getMessage("INSUFFICIENT_COIN") + order.getBaseSymbol());
                 }
+                // 【下单冻结流水】冻结成功后记一条资金流水，便于与成交后的 REFUND/INCOME/FEE 流水一起平账。
+                // 买单：冻结的是计价币（如 USDT），金额为 turnover = amount * price。
+                saveOrderFreezeTransaction(memberId, order.getBaseSymbol(), turnover.negate(), order.getOrderId());
             }
         } else if (order.getDirection() == ExchangeOrderDirection.SELL) {
             MemberWallet wallet = memberWalletService.findByCoinUnitAndMemberId(order.getCoinSymbol(), memberId);
@@ -143,6 +146,8 @@ public class ExchangeOrderService extends BaseService {
                 if (result.getCode() != 0) {
                     return MessageResult.error(500, msService.getMessage("INSUFFICIENT_COIN") + order.getCoinSymbol());
                 }
+                // 【下单冻结流水】卖单：冻结的是标的币（如 BTC），金额为 order.getAmount()。
+                saveOrderFreezeTransaction(memberId, order.getCoinSymbol(), order.getAmount().negate(), order.getOrderId());
             }
         }
         order = exchangeOrderRepository.saveAndFlush(order);
@@ -151,6 +156,41 @@ public class ExchangeOrderService extends BaseService {
         } else {
             return MessageResult.error(500, "error");
         }
+    }
+
+    /**
+     * 【下单冻结流水】记录“可用 → 冻结”的资金流水，用于与成交后的解冻/划转流水一起平账。
+     *
+     * 设计说明：
+     * 1）下单时：member_wallet 执行 balance -= amount, frozen += amount，仅改表内结构，总资产不变。
+     * 2）为便于用户端“资金明细”与审计平账，此处记一条 member_transaction：
+     *    - type = EXCHANGE（币币交易相关）；
+     *    - amount 传负值，表示“可用减少”（即资金被冻结，用户可见为“冻结 xxx”）。
+     * 3）成交后：fund 服务会按清算结果写 REFUND（解冻退回）、INCOME（收入）、FEE（手续费）等流水，
+     *    与本条“冻结”流水一起，形成完整链路：下单冻结(负) → 解冻/收入/扣费(正/负)，便于按用户+币种汇总对账。
+     *
+     * @param memberId  用户 ID
+     * @param symbol    冻结的币种（买单为 baseSymbol 如 USDT，卖单为 coinSymbol 如 BTC）
+     * @param amountNegative 冻结金额的负值（即 -turnover 或 -order.getAmount()），流水表里存负表示“可用减少”
+     * @param orderId   订单号，写入 MemberTransaction.refType=ORDER + refId，便于与 exchange_order 关联平账与排查
+     */
+    private void saveOrderFreezeTransaction(Long memberId, String symbol, BigDecimal amountNegative, String orderId) {
+        if (memberId == null || symbol == null || amountNegative == null || amountNegative.compareTo(BigDecimal.ZERO) == 0) {
+            return;
+        }
+        MemberTransaction tx = new MemberTransaction();
+        tx.setMemberId(memberId);
+        tx.setSymbol(symbol);
+        tx.setAmount(amountNegative);
+        tx.setType(TransactionType.EXCHANGE_FREEZE);
+        tx.setFee(BigDecimal.ZERO);
+        tx.setDiscountFee("0");
+        tx.setRealFee("0");
+        if (orderId != null && !orderId.isEmpty()) {
+            tx.setRefType(MemberTransaction.REF_TYPE_ORDER);
+            tx.setRefId(orderId);
+        }
+        transactionService.save(tx);
     }
 
     /**
@@ -931,8 +971,8 @@ public class ExchangeOrderService extends BaseService {
                 return null;
             } else {
                 memberWalletService.freezeBalance(wallet, turnover);
-                //wallet.setBalance(wallet.getBalance().subtract(turnover));
-                //wallet.setFrozenBalance(wallet.getFrozenBalance().add(turnover));
+                // 【下单冻结流水】API 下单买单：冻结计价币，记流水便于平账。
+                saveOrderFreezeTransaction(memberId, order.getBaseSymbol(), turnover.negate(), order.getOrderId());
             }
         } else if (order.getDirection() == ExchangeOrderDirection.SELL) {
             MemberWallet wallet = memberWalletService.findByCoinUnitAndMemberId(order.getCoinSymbol(), memberId);
@@ -940,8 +980,8 @@ public class ExchangeOrderService extends BaseService {
                 return null;
             } else {
                 memberWalletService.freezeBalance(wallet, order.getAmount());
-                //wallet.setBalance(wallet.getBalance().subtract(order.getAmount()));
-                //wallet.setFrozenBalance(wallet.getFrozenBalance().add(order.getAmount()));
+                // 【下单冻结流水】API 下单卖单：冻结标的币，记流水便于平账。
+                saveOrderFreezeTransaction(memberId, order.getCoinSymbol(), order.getAmount().negate(), order.getOrderId());
             }
         }
         order = exchangeOrderRepository.saveAndFlush(order);

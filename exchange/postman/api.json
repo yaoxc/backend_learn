@@ -1,0 +1,216 @@
+{
+  "info": {
+    "name": "exchange-撮合引擎",
+    "_postman_id": "e9c5b6c4-0000-0000-0000-exchange-monitor",
+    "description": "本地环境（dev）下的 exchange 撮合监控与管理接口集合。\n基础地址：http://127.0.0.1:6002/monitor",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "撮合盘面概览 /monitor/overview",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/overview?symbol=BTC/USDT",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "overview"],
+          "query": [
+            { "key": "symbol", "value": "BTC/USDT" }
+          ]
+        },
+        "description": "查看指定交易对的撮合盘面概览：买/卖盘数量、市价队列长度、深度等。"
+      }
+    },
+    {
+      "name": "撮合盘面详情 /monitor/trader-detail",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/trader-detail?symbol=BTC/USDT",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "trader-detail"],
+          "query": [
+            { "key": "symbol", "value": "BTC/USDT" }
+          ]
+        },
+        "description": "查看指定交易对的撮合盘面详细队列（买卖限价/市价队列）。"
+      }
+    },
+    {
+      "name": "撮合盘口明细 /monitor/plate",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/plate?symbol=BTC/USDT",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "plate"],
+          "query": [
+            { "key": "symbol", "value": "BTC/USDT" }
+          ]
+        },
+        "description": "返回买卖盘口的逐档明细（TradePlateItem 列表）。"
+      }
+    },
+    {
+      "name": "撮合盘口简版 /monitor/plate-mini",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/plate-mini?symbol=BTC/USDT",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "plate-mini"],
+          "query": [
+            { "key": "symbol", "value": "BTC/USDT" }
+          ]
+        },
+        "description": "返回买卖盘口的精简 JSON 结构，深度固定为 24 档。"
+      }
+    },
+    {
+      "name": "撮合盘口全量 /monitor/plate-full",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/plate-full?symbol=BTC/USDT",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "plate-full"],
+          "query": [
+            { "key": "symbol", "value": "BTC/USDT" }
+          ]
+        },
+        "description": "返回买卖盘口的全量 JSON 结构，深度最多 100 档。"
+      }
+    },
+    {
+      "name": "撮合引擎列表 /monitor/symbols",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/symbols",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "symbols"]
+        },
+        "description": "返回当前进程内已创建的撮合引擎 symbol 列表。"
+      }
+    },
+    {
+      "name": "撮合结果队列监控 /monitor/match-queue",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/match-queue",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "match-queue"]
+        },
+        "description": "方案 A：查看各交易对的撮合结果队列 size/capacity，用于监控和告警。"
+      }
+    },
+    {
+      "name": "引擎状态列表 /monitor/engines",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/engines",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "engines"]
+        },
+        "description": "返回各 symbol 的引擎状态：1=正常，2=暂停(tradingHalt=true)。"
+      }
+    },
+    {
+      "name": "查找撮合订单 /monitor/order",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/order?symbol=BTC/USDT&orderId={{orderId}}&direction=BUY&type=LIMIT_PRICE",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "order"],
+          "query": [
+            { "key": "symbol", "value": "BTC/USDT" },
+            { "key": "orderId", "value": "{{orderId}}" },
+            { "key": "direction", "value": "BUY" },
+            { "key": "type", "value": "LIMIT_PRICE" }
+          ]
+        },
+        "description": "在撮合引擎内按 symbol + orderId + direction + type 查找订单，用于排查撮合状态。"
+      }
+    },
+    {
+      "name": "重置撮合引擎 /monitor/reset-trader",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/reset-trader?symbol=BTC/USDT",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "reset-trader"],
+          "query": [
+            { "key": "symbol", "value": "BTC/USDT" }
+          ]
+        },
+        "description": "在暂停状态下重置指定 symbol 的撮合引擎，并根据历史挂单重新构建簿。"
+      }
+    },
+    {
+      "name": "启动撮合引擎 /monitor/start-trader",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/start-trader?symbol=BTC/USDT",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "start-trader"],
+          "query": [
+            { "key": "symbol", "value": "BTC/USDT" }
+          ]
+        },
+        "description": "启动（或恢复）指定交易对的撮合引擎：不存在则创建，存在且暂停则 resume。"
+      }
+    },
+    {
+      "name": "暂停撮合引擎 /monitor/stop-trader",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://127.0.0.1:6002/monitor/stop-trader?symbol=BTC/USDT",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "6002",
+          "path": ["monitor", "stop-trader"],
+          "query": [
+            { "key": "symbol", "value": "BTC/USDT" }
+          ]
+        },
+        "description": "暂停指定交易对的撮合引擎，仅设置 tradingHalt=true，不主动撤单。"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "orderId",
+      "value": "REPLACE_WITH_ORDER_ID",
+      "type": "string"
+    }
+  ]
+}
+

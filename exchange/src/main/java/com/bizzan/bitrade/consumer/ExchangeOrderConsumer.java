@@ -11,6 +11,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -25,8 +26,8 @@ public class ExchangeOrderConsumer {
     @Autowired
     private KafkaTemplate<String,String> kafkaTemplate;
 
-    @KafkaListener(topics = "exchange-order",containerFactory = "kafkaListenerContainerFactory")
-    public void onOrderSubmitted(List<ConsumerRecord<String,String>> records){
+    @KafkaListener(topics = "exchange-order",containerFactory = "kafkaListenerContainerFactory",groupId = "exchange-order-debug")
+    public void onOrderSubmitted(List<ConsumerRecord<String,String>> records, Acknowledgment ack){
         for (int i = 0; i < records.size(); i++) {
             ConsumerRecord<String,String> record  = records.get(i);
             log.info("接收订单>>topic={},value={},size={}",record.topic(),record.value(),records.size());
@@ -55,10 +56,14 @@ public class ExchangeOrderConsumer {
                 }
             }
         }
+        // 手动提交当前批次 offset，确保订单已成功写入撮合引擎后再提交
+        if (ack != null) {
+            ack.acknowledge();
+        }
     }
 
-    @KafkaListener(topics = "exchange-order-cancel",containerFactory = "kafkaListenerContainerFactory")
-    public void onOrderCancel(List<ConsumerRecord<String,String>> records){
+    @KafkaListener(topics = "exchange-order-cancel",containerFactory = "kafkaListenerContainerFactory", groupId = "exchange-order-cancel-debug")
+    public void onOrderCancel(List<ConsumerRecord<String,String>> records, Acknowledgment ack){
         for (int i = 0; i < records.size(); i++) {
             ConsumerRecord<String,String> record  = records.get(i);
             log.info("取消订单topic={},key={},size={}",record.topic(),record.key(),records.size());
@@ -78,6 +83,9 @@ public class ExchangeOrderConsumer {
                     e.printStackTrace();
                 }
             }
+        }
+        if (ack != null) {
+            ack.acknowledge();
         }
     }
 }
