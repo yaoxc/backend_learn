@@ -189,9 +189,6 @@
 		<dependency>
 			<groupId>com.sparkframework</groupId>
 			<artifactId>spark-core</artifactId>
-			<scope>system</scope>
-			<version>2.6.0</version>
-			<systemPath>${project.basedir}/lib/spark-core-2.6.0.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>

@@ -297,6 +297,11 @@
 				<version>${querydsl_version}</version>
 			</dependency>
 			<dependency>
+				<groupId>com.querydsl</groupId>
+				<artifactId>querydsl-core</artifactId>
+				<version>${querydsl_version}</version>
+			</dependency>
+			<dependency>
 				<groupId>javax.inject</groupId>
 				<artifactId>javax.inject</artifactId>
 				<version>${javax_inject_version}</version>
@@ -373,6 +378,27 @@
 				<artifactId>exchange-core</artifactId>
 				<version>1.0</version>
 			</dependency>
+			<!-- 原 system 引用 core/lib/spark-core-2.6.0.jar，改为本地仓库依赖以便 IDEA/单模块编译正常 -->
+			<dependency>
+				<groupId>com.sparkframework</groupId>
+				<artifactId>spark-core</artifactId>
+				<version>2.6.0</version>
+			</dependency>
+			<dependency>
+				<groupId>com.aqmd</groupId>
+				<artifactId>aqmd-netty</artifactId>
+				<version>2.0.1</version>
+			</dependency>
+			<dependency>
+				<groupId>com.aqmd</groupId>
+				<artifactId>aqmd-netty-api</artifactId>
+				<version>2.0.1</version>
+			</dependency>
+			<dependency>
+				<groupId>com.aqmd</groupId>
+				<artifactId>aqmd-netty-core</artifactId>
+				<version>2.0.1</version>
+			</dependency>
 			<dependency>
 				<groupId>com.bizzan.wallet</groupId>
 				<artifactId>eth</artifactId>
@@ -381,6 +407,96 @@
 
 		</dependencies>
 	</dependencyManagement>
+
+	<!-- 首次/clean 后从根目录执行一次 mvn validate（或任意生命周期）即可把 spark-core 装到本地仓库，IDEA 与单模块编译即可解析 -->
+	<profiles>
+		<profile>
+			<id>install-spark-core</id>
+			<activation>
+				<file><exists>core/lib/spark-core-2.6.0.jar</exists></file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-install-plugin</artifactId>
+						<version>3.1.1</version>
+						<executions>
+							<execution>
+								<id>install-spark-core</id>
+								<phase>validate</phase>
+								<goals><goal>install-file</goal></goals>
+								<configuration>
+									<file>${project.basedir}/core/lib/spark-core-2.6.0.jar</file>
+									<groupId>com.sparkframework</groupId>
+									<artifactId>spark-core</artifactId>
+									<version>2.6.0</version>
+									<packaging>jar</packaging>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>install-aqmd-netty</id>
+			<activation>
+				<file><exists>market/lib/aqmd-netty-2.0.1.jar</exists></file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-install-plugin</artifactId>
+						<version>3.1.1</version>
+						<executions>
+							<execution>
+								<id>install-aqmd-netty</id>
+								<phase>validate</phase>
+								<goals><goal>install-file</goal></goals>
+								<configuration>
+									<file>${project.basedir}/market/lib/aqmd-netty-2.0.1.jar</file>
+									<groupId>com.aqmd</groupId>
+									<artifactId>aqmd-netty</artifactId>
+									<version>2.0.1</version>
+									<packaging>jar</packaging>
+									<generatePom>true</generatePom>
+								</configuration>
+							</execution>
+							<execution>
+								<id>install-aqmd-netty-api</id>
+								<phase>validate</phase>
+								<goals><goal>install-file</goal></goals>
+								<configuration>
+									<file>${project.basedir}/market/lib/aqmd-netty-api-2.0.1.jar</file>
+									<groupId>com.aqmd</groupId>
+									<artifactId>aqmd-netty-api</artifactId>
+									<version>2.0.1</version>
+									<packaging>jar</packaging>
+									<generatePom>true</generatePom>
+								</configuration>
+							</execution>
+							<execution>
+								<id>install-aqmd-netty-core</id>
+								<phase>validate</phase>
+								<goals><goal>install-file</goal></goals>
+								<configuration>
+									<file>${project.basedir}/market/lib/aqmd-netty-core-2.0.1.jar</file>
+									<groupId>com.aqmd</groupId>
+									<artifactId>aqmd-netty-core</artifactId>
+									<version>2.0.1</version>
+									<packaging>jar</packaging>
+									<generatePom>true</generatePom>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 	<!-- 配置阿里云仓库 -->
 	<repositories>
 		<repository>

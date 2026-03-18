@@ -116,14 +116,6 @@
 			<groupId>com.bizzan.bitrade</groupId>
 			<artifactId>core</artifactId>
 		</dependency>
-		<!-- core 的 SystemConfig 依赖 com.sparkframework.sql.DB，spark-core 为 system 作用域不传递，与 clearing 一致 -->
-		<dependency>
-			<groupId>com.sparkframework</groupId>
-			<artifactId>spark-core</artifactId>
-			<version>2.6.0</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/../core/lib/spark-core-2.6.0.jar</systemPath>
-		</dependency>
 		<dependency>
 			<groupId>io.reactivex</groupId>
 			<artifactId>rxjava</artifactId>
@@ -131,23 +123,14 @@
 		<dependency>
 			<groupId>com.aqmd</groupId>
 			<artifactId>aqmd-netty</artifactId>
-			<version>2.0.1</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/lib/aqmd-netty-2.0.1.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>com.aqmd</groupId>
 			<artifactId>aqmd-netty-api</artifactId>
-			<version>2.0.1</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/lib/aqmd-netty-api-2.0.1.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>com.aqmd</groupId>
 			<artifactId>aqmd-netty-core</artifactId>
-			<version>2.0.1</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/lib/aqmd-netty-core-2.0.1.jar</systemPath>
 		</dependency>
         <dependency>
             <groupId>org.apache.shiro</groupId>
@@ -168,6 +151,10 @@
 		<dependency>
 			<groupId>org.apache.shiro</groupId>
 			<artifactId>shiro-spring</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.sparkframework</groupId>
+			<artifactId>spark-core</artifactId>
 		</dependency>
 	</dependencies>
 	<!-- 修改说明：不再用 Maven profile 替换 resources，改用 Spring Boot 多环境约定（application.properties + application-{profile}.properties），见 README-配置约定.md -->

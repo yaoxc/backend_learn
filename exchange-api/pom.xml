@@ -106,9 +106,6 @@
         <dependency>
             <groupId>com.sparkframework</groupId>
             <artifactId>spark-core</artifactId>
-            <scope>system</scope>
-            <version>2.6.0</version>
-            <systemPath>${project.basedir}/lib/spark-core-2.6.0.jar</systemPath>
         </dependency>
     </dependencies>
     <!-- 修改说明：多环境改用 Spring Boot 约定（application.properties + application-{profile}.properties），不再用 Maven profile 替换 resources，详见 src/main/resources/README-配置约定.md -->

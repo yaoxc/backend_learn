@@ -109,9 +109,6 @@
 		<dependency>
 			<groupId>com.sparkframework</groupId>
 			<artifactId>spark-core</artifactId>
-			<version>2.6.0</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/../core/lib/spark-core-2.6.0.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>mysql</groupId>
@@ -141,6 +138,15 @@
 		<dependency>
 			<groupId>commons-httpclient</groupId>
 			<artifactId>commons-httpclient</artifactId>
+		</dependency>
+		<!-- 本模块源码直接使用，必须显式声明，不依赖 core 的传递（core 的 system 依赖会导致其 POM 被判定无效时传递依赖不可用） -->
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>fastjson</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.querydsl</groupId>
+			<artifactId>querydsl-core</artifactId>
 		</dependency>
 		<!-- 升级说明：NECaptchaVerifier 使用 org.apache.commons.lang3.Validate，缺 commons-lang3 时 RegisterController 构造会 NoClassDefFoundError，故显式引入。 -->
 		<dependency>
