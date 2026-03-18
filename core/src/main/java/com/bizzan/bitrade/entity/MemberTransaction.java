@@ -146,7 +146,7 @@ public class MemberTransaction {
     @PreUpdate
     public void fillDerivedFields() {
         if (this.type != null) {
-            // 稳定字符串口径：不依赖 ordinal 序号
+            // 稳定字符串口径：用于对账/审计展示（字符串），与 type 的数值编码解耦
             this.typeStr = this.type.name();
         }
     }

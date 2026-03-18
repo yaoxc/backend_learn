@@ -10,3 +10,4 @@ exchange/data/
 # Ignore local jar libraries
 *.jar
 !**/lib/README.md
+**/javac.*.args
