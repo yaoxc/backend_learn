@@ -68,7 +68,14 @@ public class ClearingComputeService {
         ClearingResultDTO.TradeClearingItem item = new ClearingResultDTO.TradeClearingItem();
         item.setMemberId(order.getMemberId());
         item.setOrderId(order.getOrderId());
+        if (trade != null) {
+            item.setTradeId(trade.getTradeId());
+        }
         item.setDirection(order.getDirection() != null ? order.getDirection().name() : null);
+
+        if (trade == null) {
+            return item;
+        }
 
         BigDecimal turnover = order.getDirection() == ExchangeOrderDirection.BUY ? trade.getBuyTurnover() : trade.getSellTurnover();
         BigDecimal fee;

@@ -5,6 +5,7 @@ import com.bizzan.bitrade.entity.*;
 import com.bizzan.bitrade.Trader.result.MatchResult;
 import com.bizzan.bitrade.Trader.result.MatchResultPublisher;
 import com.bizzan.bitrade.Trader.result.OrderEventLogger;
+import com.bizzan.bitrade.util.TradeIdGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -47,12 +48,19 @@ public class CoinTrader {
     private static final int KAFKA_BATCH_MAX_SIZE = 1000;
 
     // ===================== 交易对与配置 =====================
+    /** 交易对标识（如 BTC/USDT）；一个 CoinTrader 实例只负责一个 symbol 的订单簿与撮合。 */
     private final String symbol;
+    /** 撮合结果/订单完成等消息下发到 Kafka（方案 A 走 MatchResultPublisher；回退路径走这里直接发 topic）。 */
     private KafkaTemplate<String, String> kafkaTemplate;
+    /** 计价币精度（coinScale）：用于成交数量、盘口深度等数量侧的 scale 控制（如 BTC 数量保留 4/8 位）。 */
     private int coinScale = 4;
+    /** 基准币精度（baseCoinScale）：用于成交额/成交价相关的金额侧 scale 控制（如 USDT 金额保留 2/4/8 位）。 */
     private int baseCoinScale = 4;
+    /** 撮合结果发布/推送模式（不同模式决定盘口推送、成交推送的策略/频率，由 ExchangeCoin 配置驱动）。 */
     private ExchangeCoinPublishType publishType;
+    /** 清算时间配置（通常来自交易对配置）；用于按日/定时清算相关逻辑的时间点判断。 */
     private String clearTime;
+    /** 用于解析/格式化清算时间等字符串配置（与 clearTime 配套使用）。 */
     private SimpleDateFormat dateTimeFormat;
 
     // ===================== 订单簿（价格优先 + 时间优先） =====================
@@ -65,7 +73,9 @@ public class CoinTrader {
     private LinkedList<ExchangeOrder> sellMarketQueue;
 
     // ===================== 盘口与状态 =====================
+    /** 买盘：本方为买方向的挂单集合，供卖单撮合时取对手价、成交后扣减并推送盘口变化。 */
     private TradePlate buyTradePlate;
+    /** 卖盘：本方为卖方向的挂单集合，供买单撮合时取对手价、成交后扣减并推送盘口变化。 */
     private TradePlate sellTradePlate;
     /**
      * 含义：当前交易对是否处于“暂停交易”状态。
@@ -74,7 +84,6 @@ public class CoinTrader {
      *  - ExchangeOrderConsumer：收到新订单时，若 trader.isTradingHalt() 为 true，不撮合，直接发 exchange-order-cancel-success 把订单撤掉。
      *  - CoinTrader.trade()：若 tradingHalt 为 true，直接 return，不执行撮合逻辑。
      * 用途：运维/维护时暂停该交易对，不接新单、不产生新成交。
-     * 
      */
     private boolean tradingHalt = false;
     /**
@@ -107,6 +116,9 @@ public class CoinTrader {
     private OrderEventLogger orderEventLogger;
     /** 回放模式：为 true 时不写订单日志、不发布撮合结果，仅用于 replayOrderLog() 恢复订单簿 */
     private volatile boolean replayMode = false;
+
+    /** 撮合结果 messageId 前缀（可配置）；最终 messageId = prefix + snowflakeId */
+    private String matchResultMessageIdPrefix = "MR-";
 
     // ===================== 构造与初始化 =====================
 
@@ -487,6 +499,9 @@ public class CoinTrader {
         flushMatchResult(exchangeTrades, completedOrders);
         // 若有订单在本轮完全成交，推送盘口变化给前端
         if (!completedOrders.isEmpty()) {
+            // 取对手盘：买单与卖盘成交、卖单与买盘成交，故推送与当前订单方向相反的盘口变化
+            // 买单（BUY）是跟卖盘（sellTradePlate）成交的，所以推送卖盘的盘口变化；
+            // 卖单（SELL）是跟买盘（buyTradePlate）成交的，所以推送买盘的盘口变化。
             TradePlate plate = focusedOrder.getDirection() == ExchangeOrderDirection.BUY ? sellTradePlate : buyTradePlate;
             sendTradePlateMessage(plate);
         }
@@ -580,6 +595,8 @@ public class CoinTrader {
 
         // 目的：构造成交记录 DTO，供 Kafka 下发、下游写成交明细与资金流水
         ExchangeTrade exchangeTrade = new ExchangeTrade();
+        // 成交ID必须由撮合侧生成并下发，便于清算/结算/资金流水全链路按 tradeId 对账追溯
+        exchangeTrade.setTradeId(TradeIdGenerator.next());
         exchangeTrade.setSymbol(symbol);
         exchangeTrade.setAmount(tradedAmount);
         exchangeTrade.setDirection(focusedOrder.getDirection());
@@ -656,6 +673,7 @@ public class CoinTrader {
 
         //创建成交记录
         ExchangeTrade exchangeTrade = new ExchangeTrade();
+        exchangeTrade.setTradeId(TradeIdGenerator.next());
         exchangeTrade.setSymbol(symbol);
         exchangeTrade.setAmount(tradedAmount);
         exchangeTrade.setDirection(focusedOrder.getDirection());
@@ -695,7 +713,7 @@ public class CoinTrader {
         }
         if (matchResultPublisher != null) {
             // 生成全局 messageId，供消费端幂等：同一 messageId 只落库一次
-            String messageId = UUID.randomUUID().toString();
+            String messageId = (matchResultMessageIdPrefix != null ? matchResultMessageIdPrefix : "") + TradeIdGenerator.next();
             matchResultPublisher.publish(new MatchResult(messageId, symbol, System.currentTimeMillis(),
                     trades != null ? trades : Collections.emptyList(),
                     completedOrders != null ? completedOrders : Collections.emptyList()));
@@ -718,6 +736,7 @@ public class CoinTrader {
      * @param payload 消息体 JSON
      * @return true 发送成功，false 重试后仍失败
      */
+    @SuppressWarnings("null")
     private boolean sendToKafkaWithRetry(String topic, String payload) {
         Exception lastEx = null;
         for (int i = 0; i < KAFKA_SEND_MAX_RETRIES; i++) {
@@ -939,6 +958,14 @@ public class CoinTrader {
 
     public MatchResultPublisher getMatchResultPublisher() {
         return matchResultPublisher;
+    }
+
+    public String getMatchResultMessageIdPrefix() {
+        return matchResultMessageIdPrefix;
+    }
+
+    public void setMatchResultMessageIdPrefix(String matchResultMessageIdPrefix) {
+        this.matchResultMessageIdPrefix = matchResultMessageIdPrefix;
     }
 
     public void setOrderEventLogger(OrderEventLogger orderEventLogger) {

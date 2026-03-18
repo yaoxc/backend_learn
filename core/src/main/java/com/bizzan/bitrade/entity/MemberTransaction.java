@@ -3,6 +3,7 @@ package com.bizzan.bitrade.entity;
 import cn.afterturn.easypoi.excel.annotation.Excel;
 
 import com.bizzan.bitrade.constant.TransactionType;
+import com.bizzan.bitrade.entity.converter.TransactionTypeAttributeConverter;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import lombok.Data;
@@ -82,8 +83,15 @@ public class MemberTransaction {
      *     例如存成 17（具体取决于 TransactionType 的 ordinal/显式编号实现）。
      */
     @Excel(name = "交易类型", orderNum = "5", width = 25)
-    @Enumerated(EnumType.ORDINAL)
+    @Convert(converter = TransactionTypeAttributeConverter.class)
     private TransactionType type;
+
+    /**
+     * 交易类型字符串（稳定口径）：用于避免 EnumType.ORDINAL 带来的“数字含义随枚举顺序变化”的问题。
+     * 建议存 TransactionType.name()（如 EXCHANGE_FREEZE），必要时可用于对账/审计展示与回填。
+     */
+    @Column(name = "type_str", length = 64)
+    private String typeStr;
     /**
      * 币种名称，如 BTC
      */
@@ -107,6 +115,13 @@ public class MemberTransaction {
     private String refId;
 
     /**
+     * 成交 ID（tradeId），用于把成交相关流水与具体成交绑定。
+     * 注意：下单冻结阶段还没有 tradeId，此字段通常为空；成交/退款/手续费等阶段可写入。
+     */
+    @Column(name = "trade_id", length = 64)
+    private String tradeId;
+
+    /**
      * 交易手续费
      * 提现和转账才有手续费，充值没有;如果是法币交易，只收发布广告的那一方的手续费
      */
@@ -126,4 +141,13 @@ public class MemberTransaction {
      * 折扣手续费
      */
     private String discountFee ;
+
+    @PrePersist
+    @PreUpdate
+    public void fillDerivedFields() {
+        if (this.type != null) {
+            // 稳定字符串口径：不依赖 ordinal 序号
+            this.typeStr = this.type.name();
+        }
+    }
 }

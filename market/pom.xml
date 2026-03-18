@@ -28,6 +28,24 @@
 			<groupId>org.springframework.kafka</groupId>
 			<artifactId>spring-kafka</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>fastjson</artifactId>
+		</dependency>
+		<!-- 运行时需要：core 的 QueryDslConfig 依赖 javax.persistence.EntityManager（反射扫描时加载） -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<!-- 运行时需要：core 的 QueryDslConfig 依赖 JPAQueryFactory（避免启动期反射扫描时缺包） -->
+		<dependency>
+			<groupId>com.querydsl</groupId>
+			<artifactId>querydsl-jpa</artifactId>
+		</dependency>
 		<!-- 升级说明：Eureka 客户端改为 netflix-eureka-client（原 spring-cloud-starter-eureka） -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>

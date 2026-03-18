@@ -59,6 +59,7 @@ public class SettlementService {
                 FundInstructionDTO.FundInstructionItem in = new FundInstructionDTO.FundInstructionItem();
                 in.setMemberId(memberId);
                 in.setOrderId(orderId);
+                in.setTradeId(item.getTradeId());
                 in.setSymbol(item.getIncomeSymbol());
                 BigDecimal fee = (item.getFee() != null && item.getFee().compareTo(BigDecimal.ZERO) > 0) ? item.getFee() : BigDecimal.ZERO;
                 in.setAmount(item.getIncomeAmount().add(fee));
@@ -69,6 +70,7 @@ public class SettlementService {
                 FundInstructionDTO.FundInstructionItem out = new FundInstructionDTO.FundInstructionItem();
                 out.setMemberId(memberId);
                 out.setOrderId(orderId);
+                out.setTradeId(item.getTradeId());
                 out.setSymbol(item.getOutcomeSymbol());
                 out.setAmount(item.getOutcomeAmount().negate());
                 out.setInstructionType(FundInstructionDTO.InstructionType.OUTCOME);
@@ -79,6 +81,7 @@ public class SettlementService {
                 FundInstructionDTO.FundInstructionItem fee = new FundInstructionDTO.FundInstructionItem();
                 fee.setMemberId(memberId);
                 fee.setOrderId(orderId);
+                fee.setTradeId(item.getTradeId());
                 fee.setSymbol(feeSymbol);
                 fee.setAmount(item.getFee().negate());
                 fee.setInstructionType(FundInstructionDTO.InstructionType.FEE);
@@ -86,6 +89,7 @@ public class SettlementService {
                 FundInstructionDTO.FundInstructionItem feeRevenue = new FundInstructionDTO.FundInstructionItem();
                 feeRevenue.setMemberId(platformMemberId);
                 feeRevenue.setOrderId(orderId);
+                feeRevenue.setTradeId(item.getTradeId());
                 feeRevenue.setSymbol(feeSymbol);
                 feeRevenue.setAmount(item.getFee());
                 feeRevenue.setInstructionType(FundInstructionDTO.InstructionType.FEE_REVENUE);

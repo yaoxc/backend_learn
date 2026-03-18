@@ -92,6 +92,20 @@
 					</compilerArgs>
 				</configuration>
 			</plugin>
+			<!-- reactor 仅执行 compile 时下游模块需 core 的 jar；此处使 compile 后即打 jar，避免 exchange-core 解析到本地旧 core -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>default-jar</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 	<dependencies>

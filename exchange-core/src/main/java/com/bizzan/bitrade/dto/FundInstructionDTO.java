@@ -1,14 +1,11 @@
 package com.bizzan.bitrade.dto;
 
-import com.alibaba.fastjson.annotation.JSONField;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
 
 /**
  * 结算/业务产出的资金指令 DTO，用于落库 payload 与发 Kafka；资金服务据此执行加减款、解冻等。
@@ -49,6 +46,11 @@ public class FundInstructionDTO implements Serializable {
         private Long memberId;
         /** 订单号等，下单场景下会写入流水 refId，与 refType=ORDER 配合 */
         private String orderId;
+        /**
+         * 可选：成交 ID（tradeId）。用于把成交相关资金流水与具体成交绑定（对账/追溯）。
+         * 下单冻结阶段通常为空；成交入账/扣冻等阶段若能提供则写入。
+         */
+        private String tradeId;
         private String symbol;
         private BigDecimal amount;
         /**

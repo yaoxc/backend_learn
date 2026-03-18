@@ -1,37 +1,54 @@
 {
-    "instructions": [
+    "completedOrders": [
         {
             "amount": 0.00100000,
-            "instructionType": "INCOME",
-            "memberId": 1,
-            "orderId": "E177375109859551",
-            "symbol": "BTC"
-        },
-        {
-            "amount": -30.00000000000000,
-            "instructionType": "OUTCOME",
-            "memberId": 1,
-            "orderId": "E177375109859551",
-            "symbol": "USDT"
-        },
-        {
-            "amount": 30.00000000000000,
-            "instructionType": "INCOME",
+            "baseSymbol": "USDT",
+            "coinSymbol": "BTC",
+            "completed": true,
+            "direction": "SELL",
             "memberId": 10001,
-            "orderId": "E177375113493386",
-            "symbol": "USDT"
+            "orderId": "E177375230078233",
+            "price": 30000.000000,
+            "status": "TRADING",
+            "symbol": "BTC/USDT",
+            "time": 1773752300782,
+            "tradedAmount": 0.00100000,
+            "turnover": 30.00000000000000,
+            "type": "LIMIT_PRICE",
+            "useDiscount": "0"
         },
         {
-            "amount": -0.00100000,
-            "instructionType": "OUTCOME",
-            "memberId": 10001,
-            "orderId": "E177375113493386",
-            "symbol": "BTC"
+            "amount": 0.00100000,
+            "baseSymbol": "USDT",
+            "coinSymbol": "BTC",
+            "completed": true,
+            "direction": "BUY",
+            "memberId": 1,
+            "orderId": "E177375234980226",
+            "price": 30000.000000,
+            "status": "TRADING",
+            "symbol": "BTC/USDT",
+            "time": 1773752349802,
+            "tradedAmount": 0.00100000,
+            "turnover": 30.00000000000000,
+            "type": "LIMIT_PRICE",
+            "useDiscount": "0"
         }
     ],
-    "messageId": "1b7800f5-39fd-4495-9fe8-ddc4777e9852",
-    "refId": "1b7800f5-39fd-4495-9fe8-ddc4777e9852",
-    "refType": "ORDER",
+    "messageId": "4807a221-1f35-4483-83e2-9d2f3bb02513",
     "symbol": "BTC/USDT",
-    "ts": 1773751135000
+    "trades": [
+        {
+            "amount": 0.00100000,
+            "buyOrderId": "E177375234980226",
+            "buyTurnover": 30.00000000000000,
+            "direction": "BUY",
+            "price": 30000.000000,
+            "sellOrderId": "E177375230078233",
+            "sellTurnover": 30.00000000000000,
+            "symbol": "BTC/USDT",
+            "time": 1773752349844
+        }
+    ],
+    "ts": 1773752349844
 }

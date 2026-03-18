@@ -35,6 +35,16 @@
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
+        <!-- 运行时需要：core 的 QueryDslConfig 依赖 JPAQueryFactory -->
+        <dependency>
+            <groupId>com.querydsl</groupId>
+            <artifactId>querydsl-jpa</artifactId>
+        </dependency>
+        <!-- 运行时需要：exchange-core 中部分仓库/基类引用 MongoRepository -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.bizzan.bitrade</groupId>
             <artifactId>exchange-core</artifactId>

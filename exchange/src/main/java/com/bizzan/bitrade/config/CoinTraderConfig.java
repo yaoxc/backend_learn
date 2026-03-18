@@ -28,6 +28,10 @@ public class CoinTraderConfig {
     @Value("${match.queue.capacity:20000}")
     private int matchQueueCapacity;
 
+    /** 撮合结果 messageId 前缀：最终 messageId = prefix + snowflakeId */
+    @Value("${exchange.match.message-id-prefix:MR-}")
+    private String matchResultMessageIdPrefix;
+
     /**
      * 配置交易处理类；启用方案 A 时为每个交易对创建 队列+WAL+Sender 发布器并注入到 CoinTrader。
      */
@@ -43,6 +47,7 @@ public class CoinTraderConfig {
             trader.setCoinScale(coin.getCoinScale());
             trader.setPublishType(coin.getPublishType());
             trader.setClearTime(coin.getClearTime());
+            trader.setMatchResultMessageIdPrefix(matchResultMessageIdPrefix);
 
             // 刚初始化时 **暂停交易**，防止未准备好就接受订单，导致数据不一致。
             trader.stopTrading();

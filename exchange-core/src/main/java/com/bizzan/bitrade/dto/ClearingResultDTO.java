@@ -27,6 +27,8 @@ public class ClearingResultDTO implements Serializable {
     public static class TradeClearingItem implements Serializable {
         private Long memberId;
         private String orderId;
+        /** 成交ID（tradeId），用于把清算/结算/资金流水与具体成交绑定（对账/追溯） */
+        private String tradeId;
         private String direction; // BUY / SELL
         private BigDecimal fee;
         private String incomeSymbol;

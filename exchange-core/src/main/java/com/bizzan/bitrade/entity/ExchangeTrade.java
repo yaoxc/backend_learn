@@ -10,6 +10,8 @@ import java.math.BigDecimal;
  */
 @Data
 public class ExchangeTrade implements Serializable{
+    /** 成交ID（tradeId）：用于对账与全链路追溯；若上游未填充则可能为空 */
+    private String tradeId;
     private String symbol;
     private BigDecimal price;
     private BigDecimal amount;

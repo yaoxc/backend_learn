@@ -150,26 +150,26 @@ public class FundInstructionExecuteService {
         switch (item.getInstructionType()) {
             case INCOME:
                 memberWalletService.increaseBalance(wallet.getId(), amount);
-                saveTransactionIfMapped(memberId, symbol, amount, BigDecimal.ZERO, item.getInstructionType(), refType, itemRefId);
+                saveTransactionIfMapped(memberId, symbol, amount, BigDecimal.ZERO, item.getInstructionType(), refType, itemRefId, item.getTradeId());
                 break;
             case OUTCOME:
                 memberWalletService.decreaseFrozen(wallet.getId(), amount.abs());
-                saveTransactionIfMapped(memberId, symbol, amount.abs().negate(), BigDecimal.ZERO, item.getInstructionType(), refType, itemRefId);
+                saveTransactionIfMapped(memberId, symbol, amount.abs().negate(), BigDecimal.ZERO, item.getInstructionType(), refType, itemRefId, item.getTradeId());
                 break;
             case FEE:
                 int feeRet = memberWalletService.deductBalance(wallet, amount.abs());
                 if (feeRet <= 0) {
                     throw new IllegalStateException("deduct balance failed: " + symbol + ", memberId=" + memberId + ", amount=" + amount.abs());
                 }
-                saveTransactionIfMapped(memberId, symbol, amount.abs().negate(), amount.abs(), item.getInstructionType(), refType, itemRefId);
+                saveTransactionIfMapped(memberId, symbol, amount.abs().negate(), amount.abs(), item.getInstructionType(), refType, itemRefId, item.getTradeId());
                 break;
             case FEE_REVENUE:
                 memberWalletService.increaseBalance(wallet.getId(), amount);
-                saveTransactionIfMapped(memberId, symbol, amount, BigDecimal.ZERO, item.getInstructionType(), refType, itemRefId);
+                saveTransactionIfMapped(memberId, symbol, amount, BigDecimal.ZERO, item.getInstructionType(), refType, itemRefId, item.getTradeId());
                 break;
             case REFUND:
                 memberWalletService.thawBalance(wallet, amount);
-                saveTransactionIfMapped(memberId, symbol, amount, BigDecimal.ZERO, item.getInstructionType(), refType, itemRefId);
+                saveTransactionIfMapped(memberId, symbol, amount, BigDecimal.ZERO, item.getInstructionType(), refType, itemRefId, item.getTradeId());
                 break;
             default:
                 log.warn("unknown instruction type: {}", item.getInstructionType());
@@ -192,12 +192,12 @@ public class FundInstructionExecuteService {
      * 映射规则：ORDER→EXCHANGE；DEPOSIT→RECHARGE；WITHDRAW→WITHDRAW/WITHDRAW_FREEZE；SWEEP→SWEEP_FREEZE；REBALANCE→REBALANCE。
      */
     private void saveTransactionIfMapped(Long memberId, String symbol, BigDecimal amount, BigDecimal fee,
-                                        FundInstructionDTO.InstructionType instructionType, String refType, String refId) {
+                                        FundInstructionDTO.InstructionType instructionType, String refType, String refId, String tradeId) {
         TransactionType txType = getTransactionType(refType, instructionType);
         if (txType == null) {
             return;
         }
-        saveTransaction(memberId, symbol, amount, txType, fee, refType, refId);
+        saveTransaction(memberId, symbol, amount, txType, fee, refType, refId, tradeId);
     }
 
     /**
@@ -245,7 +245,7 @@ public class FundInstructionExecuteService {
      * 写入资金流水，并设置 refType/refId 便于按业务分类与平账。
      */
     private void saveTransaction(Long memberId, String symbol, BigDecimal amount, TransactionType type, BigDecimal fee,
-                                 String refType, String refId) {
+                                 String refType, String refId, String tradeId) {
         MemberTransaction tx = new MemberTransaction();
         tx.setMemberId(memberId);
         tx.setSymbol(symbol);
@@ -259,6 +259,9 @@ public class FundInstructionExecuteService {
         }
         if (refId != null && !refId.isEmpty()) {
             tx.setRefId(refId);
+        }
+        if (tradeId != null && !tradeId.isEmpty()) {
+            tx.setTradeId(tradeId);
         }
         memberTransactionService.save(tx);
     }
