@@ -1,0 +1,38 @@
+# reconcile：独立对账服务。以 messageId 串联 match_result_event → clearing → settlement → fund 执行凭证。
+# 流程说明见 0_docs/对账服务-reconcile流程说明.md
+server:
+  port: 6012
+
+spring:
+  application:
+    name: reconcile
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/bizzan?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    open-in-view: false
+
+# 本地开发可关闭注册；若需接入注册中心，改为 enabled: true 并保证 Eureka 地址可达
+eureka:
+  client:
+    enabled: false
+    serviceUrl:
+      defaultZone: http://127.0.0.1:7421/eureka/
+
+# 对账调度参数（由 ReconcileProperties 绑定）
+reconcile:
+  scan:
+    # 扫描最近多少分钟内的 messageId 进行对账
+    lookbackMinutes: 60
+  tolerance:
+    # 超过多少秒仍未到达下一层则算“超时异常”
+    stageTimeoutSeconds: 120
+
