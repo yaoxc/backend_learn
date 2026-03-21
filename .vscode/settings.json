@@ -2,9 +2,8 @@
     "Codegeex.RepoIndex": true,
     "java.compile.nullAnalysis.mode": "automatic",
 
-    "markdown.preview.doubleClickToSwitchToEditor": false,
-    "workbench.editorAssociations": {
-        "*.md": "vscode.markdown.preview.editor"
-    },
+    // 不要强制用「仅预览」打开 .md，否则在 Cursor/VS Code 中容易出现双击无法编辑、或预览异常像「打不开」。
+    // 默认用源码编辑器打开；需要预览时用命令面板「Markdown: Open Preview」或快捷键（macOS 常见为 ⌘⇧V）。
+    "markdown.preview.doubleClickToSwitchToEditor": true,
     "java.configuration.updateBuildConfiguration": "automatic"
 }
