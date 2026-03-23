@@ -30,10 +30,13 @@ public class PartitionCheckpointStore {
     private static final Logger log = LoggerFactory.getLogger(PartitionCheckpointStore.class);
 
     private final Path checkpointPath;
+    /** symbol -> partition 最近映射，供 rebalance 接管时定位需要重建的 symbol */
+    private final Path symbolPartitionPath;
 
     public PartitionCheckpointStore(@Value("${match.wal.path:data/wal}") String walBasePath) {
         String base = walBasePath == null || walBasePath.isEmpty() ? "data/wal" : walBasePath;
         this.checkpointPath = Paths.get(base, "consumer-partition-checkpoint.log");
+        this.symbolPartitionPath = Paths.get(base, "consumer-symbol-partition.log");
     }
 
     public synchronized void persist(Map<TopicPartition, Long> offsets) {
@@ -90,6 +93,67 @@ public class PartitionCheckpointStore {
             }
         } catch (Exception e) {
             log.warn("load consumer checkpoint failed, path={}", checkpointPath, e);
+        }
+        return latest;
+    }
+
+    /**
+     * 持久化 symbol -> partition 映射（按最后一次覆盖）。
+     */
+    public synchronized void persistSymbolPartitions(Map<String, Integer> symbolPartitions) {
+        if (symbolPartitions == null || symbolPartitions.isEmpty()) {
+            return;
+        }
+        try {
+            Files.createDirectories(symbolPartitionPath.getParent());
+            StringBuilder sb = new StringBuilder();
+            long ts = System.currentTimeMillis();
+            for (Map.Entry<String, Integer> e : symbolPartitions.entrySet()) {
+                String symbol = e.getKey();
+                Integer partition = e.getValue();
+                if (symbol == null || symbol.trim().isEmpty() || partition == null) {
+                    continue;
+                }
+                sb.append(symbol.trim())
+                        .append('\t')
+                        .append(partition)
+                        .append('\t')
+                        .append(ts)
+                        .append('\n');
+            }
+            if (sb.length() > 0) {
+                Files.write(symbolPartitionPath, sb.toString().getBytes(StandardCharsets.UTF_8),
+                        java.nio.file.StandardOpenOption.CREATE,
+                        java.nio.file.StandardOpenOption.APPEND);
+            }
+        } catch (IOException e) {
+            log.error("persist symbol-partition failed, path={}", symbolPartitionPath, e);
+        }
+    }
+
+    /**
+     * 读取 symbol -> partition 最新映射。
+     */
+    public synchronized Map<String, Integer> loadLatestSymbolPartitions() {
+        Map<String, Integer> latest = new ConcurrentHashMap<>();
+        if (!Files.exists(symbolPartitionPath)) {
+            return latest;
+        }
+        try {
+            for (String line : Files.readAllLines(symbolPartitionPath, StandardCharsets.UTF_8)) {
+                if (line == null || line.trim().isEmpty()) {
+                    continue;
+                }
+                String[] arr = line.split("\t");
+                if (arr.length < 2) {
+                    continue;
+                }
+                String symbol = arr[0];
+                int partition = Integer.parseInt(arr[1]);
+                latest.put(symbol, partition);
+            }
+        } catch (Exception e) {
+            log.warn("load symbol-partition failed, path={}", symbolPartitionPath, e);
         }
         return latest;
     }

@@ -21,8 +21,8 @@ import java.util.stream.Collectors;
  * 2) onPartitionsAssigned：接管新分区后，重建该分区涉及 symbol 的内存订单簿。
  * <p>
  * 说明：
- * - 目前无法直接从 partition 反查 symbol，因此通过“运行期观测到的 symbol->partition”做近似映射；
- * - 若映射为空（例如实例刚启动就接管），为保证正确性，回退为“重放全部 trader”。
+ * - 目前无法直接从 partition 反查 symbol，因此通过“运行期观测到的 symbol->partition”映射；
+ * - 本实现按需求仅重放“接管分区对应 symbol”，不再回退全量重放。
  */
 @Component
 public class MatchingRebalanceCoordinator {
@@ -37,6 +37,8 @@ public class MatchingRebalanceCoordinator {
     public MatchingRebalanceCoordinator(CoinTraderFactory traderFactory, PartitionCheckpointStore checkpointStore) {
         this.traderFactory = traderFactory;
         this.checkpointStore = checkpointStore;
+        // 进程启动时加载历史 symbol->partition 映射，提升首次 rebalance 时命中率。
+        this.symbolPartitionMap.putAll(checkpointStore.loadLatestSymbolPartitions());
     }
 
     public void onOrderObserved(String symbol, int partition) {
@@ -72,14 +74,12 @@ public class MatchingRebalanceCoordinator {
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
-        // 若映射未知（新实例/刚接管），回退重放全部，确保不因遗漏 symbol 导致脏订单簿。
+        // 按需求：仅重放“接管分区对应 symbol”，映射未知时不做全量重放。
         if (symbols.isEmpty()) {
-            symbols = traderFactory.getTraderMap().keySet();
-            log.info("assigned partitions={}, symbol mapping empty, fallback replay all symbols, count={}",
-                    assigned, symbols.size());
-        } else {
-            log.info("assigned partitions={}, replay symbols={}", assigned, symbols);
+            log.warn("assigned partitions={}, but no symbol mapping found. skip rebuild (strict partition-symbol mode)", assigned);
+            return;
         }
+        log.info("assigned partitions={}, replay symbols={}", assigned, symbols);
 
         for (String symbol : symbols) {
             CoinTrader trader = traderFactory.getTrader(symbol);

@@ -111,6 +111,7 @@ public class ExchangeOrderConsumer {
             return;
         }
         Map<TopicPartition, Long> offsets = new HashMap<>();
+        Map<String, Integer> symbolPartitions = new HashMap<>();
         for (ConsumerRecord<String, String> r : records) {
             TopicPartition tp = new TopicPartition(r.topic(), r.partition());
             long nextOffset = r.offset() + 1;
@@ -118,7 +119,17 @@ public class ExchangeOrderConsumer {
             if (old == null || nextOffset > old) {
                 offsets.put(tp, nextOffset);
             }
+            try {
+                ExchangeOrder order = JSON.parseObject(r.value(), ExchangeOrder.class);
+                if (order != null && order.getSymbol() != null && !order.getSymbol().trim().isEmpty()) {
+                    symbolPartitions.put(order.getSymbol().trim(), r.partition());
+                }
+            } catch (Exception ignore) {
+                // checkpoint 辅助逻辑，解析失败不影响主流程
+            }
         }
         partitionCheckpointStore.persist(offsets);
+        // 持久化 symbol->partition 映射，供接管分区时仅重放对应 symbol。
+        partitionCheckpointStore.persistSymbolPartitions(symbolPartitions);
     }
 }
