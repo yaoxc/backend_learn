@@ -69,12 +69,16 @@ public class MatchingRebalanceCoordinator {
             return;
         }
         Set<Integer> assigned = partitions.stream().map(TopicPartition::partition).collect(Collectors.toSet());
+        // 注意：一个 partition 里可能混有多个 symbol（hash 路由冲突或分区数不足时常见），
+        // 这里不是“一个分区只重放一个 symbol”，而是筛出该分区涉及的全部 symbol 并逐个重放。
         Set<String> symbols = symbolPartitionMap.entrySet().stream()
                 .filter(e -> assigned.contains(e.getValue()))
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
         // 按需求：仅重放“接管分区对应 symbol”，映射未知时不做全量重放。
+        // 风险提示：若 symbol->partition 映射缺失，严格模式会跳过该轮重放，宁可不重放也不做全量兜底。
+        // 生产建议：配合 ExchangeOrderConsumer 的批次持久化映射，保证映射尽量完整。
         if (symbols.isEmpty()) {
             log.warn("assigned partitions={}, but no symbol mapping found. skip rebuild (strict partition-symbol mode)", assigned);
             return;

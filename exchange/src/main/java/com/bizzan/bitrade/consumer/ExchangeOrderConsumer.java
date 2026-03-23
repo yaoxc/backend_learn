@@ -130,6 +130,10 @@ public class ExchangeOrderConsumer {
         }
         partitionCheckpointStore.persist(offsets);
         // 持久化 symbol->partition 映射，供接管分区时仅重放对应 symbol。
+        // 说明：
+        // 1) 同一分区可能出现多个 symbol，这里会把本批观察到的全部 symbol 都记录下来；
+        // 2) 同一 symbol 后续若路由到新分区（如扩分区后hash变化），新值会覆盖旧值；
+        // 3) 该映射是“最近观测值”，与 Kafka committed offset 一起使用，作为重建定位辅助。
         partitionCheckpointStore.persistSymbolPartitions(symbolPartitions);
     }
 }

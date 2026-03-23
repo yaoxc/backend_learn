@@ -99,6 +99,11 @@ public class PartitionCheckpointStore {
 
     /**
      * 持久化 symbol -> partition 映射（按最后一次覆盖）。
+     * <p>
+     * 设计意图：
+     * - 这是“运行期观测映射”，并非元数据真相表；
+     * - 一个 partition 可映射多个 symbol（文件中会有多行不同 symbol）；
+     * - 一个 symbol 最终只保留最近一次看到的 partition（loadLatest* 时后写覆盖前写）。
      */
     public synchronized void persistSymbolPartitions(Map<String, Integer> symbolPartitions) {
         if (symbolPartitions == null || symbolPartitions.isEmpty()) {
