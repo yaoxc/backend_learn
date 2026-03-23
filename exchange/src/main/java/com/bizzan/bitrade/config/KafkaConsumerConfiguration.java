@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,8 +14,11 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.config.KafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.listener.ConsumerAwareRebalanceListener;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.listener.ContainerProperties;
+
+import com.bizzan.bitrade.consumer.MatchingRebalanceCoordinator;
 
 @Configuration
 @EnableKafka
@@ -36,6 +40,8 @@ public class KafkaConsumerConfiguration {
 	private int concurrency;
 	@Value("${spring.kafka.consumer.maxPollRecordsConfig}")
 	private int maxPollRecordsConfig;
+	@Autowired
+	private MatchingRebalanceCoordinator matchingRebalanceCoordinator;
 
 	public Map<String, Object> consumerConfigs() {
 		Map<String, Object> propsMap = new HashMap<>();
@@ -61,6 +67,20 @@ public class KafkaConsumerConfiguration {
 		factory.setConsumerFactory(consumerFactory());
 		factory.setConcurrency(concurrency);
 		factory.getContainerProperties().setPollTimeout(1500);
+		// 再均衡回调：撤销分区时记录 checkpoint；接管分区时触发订单簿重放恢复。
+		factory.getContainerProperties().setConsumerRebalanceListener(new ConsumerAwareRebalanceListener() {
+			@Override
+			public void onPartitionsRevokedBeforeCommit(org.apache.kafka.clients.consumer.Consumer<?, ?> consumer,
+														java.util.Collection<org.apache.kafka.common.TopicPartition> partitions) {
+				matchingRebalanceCoordinator.onPartitionsRevoked(consumer, partitions);
+			}
+
+			@Override
+			public void onPartitionsAssigned(org.apache.kafka.clients.consumer.Consumer<?, ?> consumer,
+											 java.util.Collection<org.apache.kafka.common.TopicPartition> partitions) {
+				matchingRebalanceCoordinator.onPartitionsAssigned(partitions);
+			}
+		});
 		// 使用批量监听 + 手动提交 offset，配合监听方法入参 Acknowledgment。
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
 		factory.setBatchListener(true);

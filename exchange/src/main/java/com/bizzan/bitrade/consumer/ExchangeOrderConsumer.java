@@ -13,7 +13,11 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import org.apache.kafka.common.TopicPartition;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -24,6 +28,10 @@ public class ExchangeOrderConsumer {
     
     @Autowired
     private KafkaTemplate<String,String> kafkaTemplate;
+    @Autowired
+    private MatchingRebalanceCoordinator matchingRebalanceCoordinator;
+    @Autowired
+    private PartitionCheckpointStore partitionCheckpointStore;
 
     @KafkaListener(topics = "exchange-order",containerFactory = "kafkaListenerContainerFactory",groupId = "${exchange.kafka.group.order:service-exchange-order}")
     public void onOrderSubmitted(List<ConsumerRecord<String,String>> records, Acknowledgment ack){
@@ -34,6 +42,8 @@ public class ExchangeOrderConsumer {
             if(order == null){
                 return ;
             }
+            // 记录 symbol->partition 运行期映射，供 rebalance 接管时快速定位需要重建的 trader。
+            matchingRebalanceCoordinator.onOrderObserved(order.getSymbol(), record.partition());
 
             // 订单消息可能会被多次投递，所以这里需要做幂等，保证同一条订单，只进一次撮合引擎的队列
             CoinTrader trader = traderFactory.getTrader(order.getSymbol());
@@ -59,6 +69,8 @@ public class ExchangeOrderConsumer {
         if (ack != null) {
             ack.acknowledge();
         }
+        // 除了在 onPartitionsRevoked 记录 checkpoint，这里每批也落一次，避免进程直接宕机导致 revoke 回调来不及执行。
+        persistBatchCheckpoint(records);
     }
 
     @KafkaListener(topics = "exchange-order-cancel",containerFactory = "kafkaListenerContainerFactory", groupId = "${exchange.kafka.group.cancel:service-exchange-order-cancel}")
@@ -70,6 +82,7 @@ public class ExchangeOrderConsumer {
             if(order == null){
                 return ;
             }
+            matchingRebalanceCoordinator.onOrderObserved(order.getSymbol(), record.partition());
             CoinTrader trader = traderFactory.getTrader(order.getSymbol());
             if(trader.getReady()) {
                 try {
@@ -86,5 +99,26 @@ public class ExchangeOrderConsumer {
         if (ack != null) {
             ack.acknowledge();
         }
+        persistBatchCheckpoint(records);
+    }
+
+    /**
+     * 记录“本批处理后每个分区的 nextOffset”到本地 checkpoint。
+     * 说明：Kafka committed offset 仍是消费主依据；本地 checkpoint 用于运维与重建辅助。
+     */
+    private void persistBatchCheckpoint(List<ConsumerRecord<String, String>> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        Map<TopicPartition, Long> offsets = new HashMap<>();
+        for (ConsumerRecord<String, String> r : records) {
+            TopicPartition tp = new TopicPartition(r.topic(), r.partition());
+            long nextOffset = r.offset() + 1;
+            Long old = offsets.get(tp);
+            if (old == null || nextOffset > old) {
+                offsets.put(tp, nextOffset);
+            }
+        }
+        partitionCheckpointStore.persist(offsets);
     }
 }
