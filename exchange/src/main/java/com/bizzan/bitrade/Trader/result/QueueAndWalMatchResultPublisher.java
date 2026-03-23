@@ -217,7 +217,11 @@ public class QueueAndWalMatchResultPublisher implements MatchResultPublisher {
         Exception lastEx = null;
         for (int i = 0; i < SENDER_RETRY_MAX; i++) {
             try {
-                kafkaTemplate.send(TOPIC_EXCHANGE_MATCH_RESULT, payload).get(10, TimeUnit.SECONDS);
+                // 关键：给 exchange-match-result 也设置 key=symbol
+                //   - 目的：确保同一交易对（symbol）产生的多批 MatchResult 永远进入同一个 partition，
+                //     从而在 consumer 侧保持“同 symbol 的跨批顺序”（避免默认分区策略导致的乱序）。
+                //   - 这与撮合输入端 ExchangeOrderRelayConsumer 的 key=symbol 分区保序语义对齐。
+                kafkaTemplate.send(TOPIC_EXCHANGE_MATCH_RESULT, symbol, payload).get(10, TimeUnit.SECONDS);
                 return true;
             } catch (Exception e) {
                 lastEx = e;

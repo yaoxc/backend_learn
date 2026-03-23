@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: order-sequencer
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/bitrade?useUnicode=true&characterEncoding=utf-8&serverTimezone=GMT%2B8
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    consumer:
+      group-id: order-sequencer
+    producer:
+      acks: all
+      retries: 3
+
+server:
+  port: 8095
+
+# 定序模块配置（多实例可共库共 Kafka，靠 symbol_state 悲观锁 + SEQUENCED 门槛串行化）
+sequencer:
+  batch-size: 50
+  pending-fetch-size: 500
+  poll-fixed-delay-ms: 200
+  output-topic: exchange-order-sequenced
+  matcher-ack-topic: exchange-sequencer-batch-ack
+  # KAFKA_BROKER_ACK：仅等 Kafka broker 确认；END_TO_END_MATCHER_ACK：还要等撮合往 matcher-ack-topic 回 batchId
+  wait-mode: KAFKA_BROKER_ACK
+  kafka-send-timeout-ms: 30000
+  end-to-end-timeout-ms: 60000
+  dispatch:
+    enabled: true
+
+logging:
+  level:
+    com.bizzan.bitrade.sequencer: INFO
