@@ -1,5 +1,8 @@
 package com.bizzan.bitrade.consumer;
 
+import com.alibaba.fastjson.JSON;
+import com.bizzan.bitrade.entity.ExchangeOrder;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +14,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -161,6 +166,34 @@ public class PartitionCheckpointStore {
             log.warn("load symbol-partition failed, path={}", symbolPartitionPath, e);
         }
         return latest;
+    }
+
+    /**
+     * 从一批消费记录汇总 offset 与 symbol-partition，与 {@link ExchangeOrderConsumer} 批次落盘逻辑一致。
+     */
+    public void persistFromConsumerRecords(List<ConsumerRecord<String, String>> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        Map<TopicPartition, Long> offsets = new HashMap<>();
+        Map<String, Integer> symbolPartitions = new HashMap<>();
+        for (ConsumerRecord<String, String> r : records) {
+            TopicPartition tp = new TopicPartition(r.topic(), r.partition());
+            long nextOffset = r.offset() + 1;
+            Long old = offsets.get(tp);
+            if (old == null || nextOffset > old) {
+                offsets.put(tp, nextOffset);
+            }
+            try {
+                ExchangeOrder order = JSON.parseObject(r.value(), ExchangeOrder.class);
+                if (order != null && order.getSymbol() != null && !order.getSymbol().trim().isEmpty()) {
+                    symbolPartitions.put(order.getSymbol().trim(), r.partition());
+                }
+            } catch (Exception ignore) {
+            }
+        }
+        persist(offsets);
+        persistSymbolPartitions(symbolPartitions);
     }
 }
 

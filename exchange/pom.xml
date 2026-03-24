@@ -35,6 +35,12 @@
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
+        <!-- LMAX Disruptor：可选启用 match.disruptor.enabled=true，见 MatchingOrderDisruptor -->
+        <dependency>
+            <groupId>com.lmax</groupId>
+            <artifactId>disruptor</artifactId>
+            <version>3.4.4</version>
+        </dependency>
         <!-- 运行时需要：core 的 QueryDslConfig 依赖 JPAQueryFactory -->
         <dependency>
             <groupId>com.querydsl</groupId>

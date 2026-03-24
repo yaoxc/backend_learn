@@ -21,7 +21,6 @@
 		<module>settlement</module>
 		<module>fund</module>
 		<module>reconcile</module>
-		<module>order-sequencer</module>
         <module>ucenter-api</module>
         <module>cloud</module>
 		<module>wallet/rpc-common</module>
